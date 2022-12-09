@@ -17,6 +17,7 @@
 #include "shader.h"
 #include "bezier.h"
 #include "bezier_manager.h"
+#include "camera.h"
 
 
 // GLM库从0.9.9版本起，默认会将矩阵类型初始化为一个零矩阵（所有元素均为0），而非单位矩阵
@@ -25,17 +26,27 @@
 #define M_PI 3.14159265358979323846
 
 // 函数声明
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-void processInput(GLFWwindow* window);
-void normalize(float& x, float& y);
-void click_verts_combine(float coords[16], float thres = 0.010f);
-void save_curves_to_txt();
-void read_curves_from_txt();
+//void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+//void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+//void processInput(GLFWwindow* window);
+//void normalize(float& x, float& y);
+//void click_verts_combine(float coords[16], float thres = 0.010f);
+//void save_curves_to_txt();
+//void read_curves_from_txt();
 
 // 窗口设置
 unsigned int SCR_WIDTH = 1920;
 unsigned int SCR_HEIGHT = 1080;
+
+// 设置相机
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
+bool firstMouse = true;
+
+// timing
+float deltaTime = 0.0f;	// time between current frame and last frame
+float lastFrame = 0.0f;
 
 // 用于记录鼠标状态的3个全局变量
 static bool LMBRelease_for_verts_input;
@@ -73,6 +84,228 @@ float midline_point[] = {
 	0.0f,  0.5f,
 	0.0f, -0.5f
 };
+
+
+
+
+
+
+// 阶段1：处理输入
+void processInput(GLFWwindow* window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) // 按ESC退出
+	{
+		glfwSetWindowShouldClose(window, true);
+	}
+}
+
+
+// 阶段2：处理输入
+void processInput2(GLFWwindow* window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		camera.ProcessKeyboard(FORWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		camera.ProcessKeyboard(LEFT, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		camera.ProcessKeyboard(RIGHT, deltaTime);
+}
+
+// 阶段1：处理鼠标事件和位置
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	/*if (action == GLFW_PRESS)
+	{
+		switch (button)
+		{
+		case GLFW_MOUSE_BUTTON_LEFT:
+			LMBRelease_for_verts_input = false;
+			break;
+		case GLFW_MOUSE_BUTTON_MIDDLE:
+			break;
+		case GLFW_MOUSE_BUTTON_RIGHT:
+			break;
+		default:
+			return;
+		}
+	}*/
+	if (action == GLFW_RELEASE)
+	{
+		switch (button)
+		{
+		case GLFW_MOUSE_BUTTON_LEFT:
+			glfwGetCursorPos(window, &clickPointX_d, &clickPointY_d);
+
+			//// 标准化为0 - 1
+			//clickPointX = static_cast<float>(- 1 + (clickPointX_d / SCR_WIDTH) * 2);
+			//clickPointY = static_cast<float>(- 1 + (clickPointY_d / SCR_HEIGHT) * 2);
+			if (isAddingCurve && sampleRateEnterComplete)
+			{
+				clickPointX = static_cast<float>(clickPointX_d);
+				clickPointY = static_cast<float>(clickPointY_d);
+				LMBRelease_for_verts_input = true;
+			}
+			//std::cout << LMBRelease_for_verts_input << std::endl;
+
+			//std::cout << clickPointX_d << '\t' << clickPointY_d << std::endl;
+			break;
+		case GLFW_MOUSE_BUTTON_MIDDLE:
+			break;
+		case GLFW_MOUSE_BUTTON_RIGHT:
+			break;
+		default:
+			return;
+		}
+	}
+	
+}
+
+
+// 阶段2：处理鼠标输入
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+{
+	float xpos = static_cast<float>(xposIn);
+	float ypos = static_cast<float>(yposIn);
+
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+	lastX = xpos;
+	lastY = ypos;
+
+	camera.ProcessMouseMovement(xoffset, yoffset);
+}
+
+
+// 阶段2：鼠标滚动
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	camera.ProcessMouseScroll(static_cast<float>(yoffset));
+}
+
+// glfw 随窗口大小改变，会修改SCR_HEIGHT和SCR_WIDTH的值
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+	SCR_HEIGHT = height;
+	SCR_WIDTH = width;
+}
+
+
+// 将坐标标准化到-1.0至1.0
+void normalize(float &x, float &y)
+{
+	x = (x - SCR_WIDTH / 2) / (SCR_WIDTH / 2);
+	y = (-y + SCR_HEIGHT / 2) / (SCR_HEIGHT / 2);
+}
+
+
+// 计算两点距离
+float calculate_distance_square(float x1, float y1, float x2, float y2)
+{
+	return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+}
+
+
+// 使曲线首尾相接，仅将新曲线的第一个、最后一个点与其他所有先前已绘制的曲线的首尾点相比较（鼠标自动吸附，以屏幕像素坐标系为准）
+void combine_2_verts(float coord[2], float result[2], float thres = 0.010f) // 采用像素坐标时，thres可取10，采用标准化坐标后可取0.01
+{
+	float distance_square_1, distance_square_2;
+	for (int i = 0; i < curves_manager.num_of_curves; ++i)
+	{
+		// 通常更可能与最后一个点相连，故先判断
+		distance_square_2 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[12], curves_manager.curves->ctrl_verts[13]);
+		if (distance_square_2 < thres)
+		{
+			result[0] = curves_manager.curves->ctrl_verts[12];
+			result[1] = curves_manager.curves->ctrl_verts[13];
+			std::cout << "Combine Occurred\n";
+			return;
+		}
+
+		distance_square_1 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[0], curves_manager.curves->ctrl_verts[1]);
+		if (distance_square_1 < thres)
+		{
+			result[0] = curves_manager.curves->ctrl_verts[0];
+			result[1] = curves_manager.curves->ctrl_verts[1];
+			std::cout << "Combine Occurred\n";
+		}
+	}
+}
+
+
+// 合并那些距离很近的控制顶点
+void click_verts_combine(float coords[16], float thres) // 函数声明中设定thres默认值0.010f
+{
+	for (int i = 0; i < 4; ++i)
+	{
+		float vert_coord[2], vert_result[2];
+		// 提取顶点坐标
+		vert_coord[0] = coords[i * 4 + 0];
+		vert_coord[1] = coords[i * 4 + 1];
+		// 与已有的顶点判断是否要合并
+		combine_2_verts(coords, vert_result, thres);
+		// 合并的结果在vert_result中
+		coords[i * 4 + 0] = vert_result[0];
+		coords[i * 4 + 1] = vert_result[1];
+	}
+}
+
+
+// 将曲线数据保存为txt
+void save_curves_to_txt()
+{
+	std::fstream file("CurveDataFile.txt", std::ios::out); // 先清空
+	std::ofstream curveDataFile;
+	curveDataFile.open("CurveDataFile.txt", std::ofstream::app);
+	curveDataFile << "*CURVE_DATA_FILE\n";
+
+	for (int i = 0; i < curves_manager.num_of_curves; ++i)
+	{
+		curveDataFile << "\n*CURVE_INDEX = \n" << i;
+		curveDataFile << "\n*SAMPLE_RATE = \n" << curves_manager.curves[i].sample_rate;
+		curveDataFile << "\n*CURVE_CTRL_VERTS = \n";
+		for (int j = 0; j < 16; ++j)
+		{
+			curveDataFile << curves_manager.curves[i].ctrl_verts[j] << '\t';
+		}
+		curveDataFile << "\n";
+	}
+}
+
+
+// 从txt读取曲线数据，这个函数还没写完
+void read_curves_from_txt() 
+{
+	std::ofstream curveDataFile;
+	curveDataFile.open("CurveDataFile.txt", std::ofstream::app);
+	curveDataFile << "CURVE DATA FILE\n";
+
+	for (int i = 0; i < curves_manager.num_of_curves; ++i)
+	{
+		curveDataFile << "\nCURVE_INDEX = " << i << "\n";
+		curveDataFile << "SAMPLE_RATE = " << curves_manager.curves[i].sample_rate << "\n";
+		curveDataFile << "CURVE_CTRL_VERTS: ";
+		for (int j = 0; j < 16; ++j)
+		{
+			curveDataFile << curves_manager.curves[i].ctrl_verts[j] << '\t';
+		}
+		curveDataFile << "\n";
+	}
+}
+
 
 
 // 用于测试两个class的main函数
@@ -236,6 +469,7 @@ float midline_point[] = {
 	return 0;
 }*/
 
+
 // int main()
 void modeling_addCurve()
 {
@@ -266,7 +500,6 @@ void modeling_addCurve()
 	}
 
 
-
 	/*----------设定回调函数----------*/
 
 	// 改变窗口大小时的回调函数
@@ -276,9 +509,7 @@ void modeling_addCurve()
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 
 
-
 	/*----------设定变量----------*/
-
 
 
 	/*----------VAOs VBOs shaders----------*/
@@ -312,7 +543,7 @@ void modeling_addCurve()
 	glGenVertexArrays(1, &midlineVAO);
 	glGenBuffers(1, &midlineVBO);
 
-	
+
 	//Shader shader1("E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.vert", "E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.frag");
 	//Shader shader2("E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/point.vert", "E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.frag");
 	//Shader temp_shader("E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/point.vert", "E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.frag");
@@ -321,7 +552,7 @@ void modeling_addCurve()
 	Shader shader2("./shaders/point.vert", "./shaders/test.frag");
 	Shader temp_shader("./shaders/point.vert", "./shaders/test.frag");
 	Shader midline_shader("./shaders/midline.vert", "./shaders/test.frag");
-	
+
 
 	// 设置Dear ImGui上下文
 	IMGUI_CHECKVERSION();
@@ -336,7 +567,6 @@ void modeling_addCurve()
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 
-
 	/*----------设置状态变量----------*/
 	// 为什么要有这一部分是因为在渲染循环中不可能再开一个等待鼠标点击输入顶点坐标的循环
 
@@ -345,7 +575,7 @@ void modeling_addCurve()
 
 	// 第1阶段：通过鼠标点击输入顶点
 	isAddingCurve = false; // 是否正在添加曲线，如果中途放弃添加则立刻将该值置为false
-	for (int i = 0; i < 4; ++i) 
+	for (int i = 0; i < 4; ++i)
 		vertAdded[i] = false; // 如果在添加曲线，索引值对应的顶点是否已添加
 	cancelAddingCurve = false; // 如果正在添加曲线，是否取消添加，置为true后退出添加，需重置为false
 	vertsEnterComplete = false; // 如果为true则停止交互输入，开始向curve_manager传递顶点数据
@@ -353,7 +583,7 @@ void modeling_addCurve()
 	addingVertIndex = 0; // 如果正在添加顶点，正在添加第几个顶点，取值为0，1，2，3
 	vertClicked = false; // 如果正在添加顶点，鼠标是否按下，若按下则停止记录鼠标位置
 	mouseAlreadyDown = false; // 用于处理鼠标按下再松开时的标记
-	for (int i = 0; i < 3; ++i) 
+	for (int i = 0; i < 3; ++i)
 		goToNextVert[i] = false;
 	bool start_following_last_curve = false; // 询问是否需要让新建的曲线与前一条曲线的最后一个控制顶点相连
 
@@ -374,7 +604,7 @@ void modeling_addCurve()
 		// glfwPollEvents();
 		// Sleep(100);
 
-		
+
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -394,8 +624,6 @@ void modeling_addCurve()
 		//glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
 		//glClear(GL_COLOR_BUFFER_BIT);
 
-
-		
 
 		// ImGui 添加曲线
 		if (isAddingCurve == false)
@@ -437,10 +665,10 @@ void modeling_addCurve()
 		// 如果没有退出，则开始添加曲线
 		if (isAddingCurve)
 		{
-			
+
 			if (sampleRateEnterComplete)
 			{
-					
+
 				ImGui::Text("Sample Rate = %d", sample_rate);
 
 				glBindVertexArray(temp_ctrl_point_VAO);
@@ -555,7 +783,7 @@ void modeling_addCurve()
 						ImGui::Text("Vert 4 Coords: (%g, %g)", ctrl_verts[12], ctrl_verts[13]);
 					}
 				}
-				
+
 
 				if (vertAdded[0] == true && vertAdded[1] == false) goToNextVert[0] = true;
 				if (vertAdded[1] == true && vertAdded[2] == false) goToNextVert[1] = true;
@@ -598,7 +826,6 @@ void modeling_addCurve()
 		curves_manager.updategl(curveVAO, curveVBO, pointVAO, pointVBO, instanceVBO);
 
 
-
 		/*----------曲线输入完成，开始旋转扫描建模----------*/
 
 		//bezier_manager rotate_curves[36];
@@ -616,8 +843,6 @@ void modeling_addCurve()
 		//		}
 		//	}
 		//}
-
-
 
 
 		/*----------glClear，在此之后才能draw----------*/
@@ -661,7 +886,7 @@ void modeling_addCurve()
 		}
 
 		// 显示正在添加的曲线的控制顶点位置
-		if (addingVertIndex > 0) 
+		if (addingVertIndex > 0)
 		{
 			temp_shader.use();
 			temp_shader.setVec3("color", 1.0f, 0.0f, 0.0f);
@@ -684,7 +909,7 @@ void modeling_addCurve()
 			glDrawArraysInstanced(GL_TRIANGLES, 0, 6, addingVertIndex);
 		}
 
-		
+
 		// 显示鼠标信息
 		//ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
 		ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
@@ -717,7 +942,46 @@ void modeling_addCurve()
 
 void modeling_rotate_scan()
 {
+	/*----------初始化----------*/
+
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_REFRESH_RATE, 5);
+
+	// glfw 创建窗口
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "HW2 Bezier Curve Modeling", nullptr, nullptr);
+	if (window == nullptr)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return;// -1;
+	}
+	glfwMakeContextCurrent(window);
+	glfwSwapInterval(1);
+	// 设置回调函数
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+	// 捕捉鼠标活动
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	// glad 加载OpenGL函数指针
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		return;// -1;
+	}
+	
+	// 打开深度测试
+	glEnable(GL_DEPTH_TEST);
+
+	// 编译shader
 	Shader rotate_shader("./shaders/rotate_scan.vert", "./shaders/test.frag");
+
+
+	glfwTerminate();
 }
 
 int main()
@@ -733,175 +997,4 @@ int main()
 
 
 	return 0;
-}
-
-
-// 处理输入
-void processInput(GLFWwindow* window)
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) // 按ESC退出
-	{
-		glfwSetWindowShouldClose(window, true);
-	}
-}
-
-
-// 处理鼠标事件和位置
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
-{
-	/*if (action == GLFW_PRESS)
-	{
-		switch (button)
-		{
-		case GLFW_MOUSE_BUTTON_LEFT:
-			LMBRelease_for_verts_input = false;
-			break;
-		case GLFW_MOUSE_BUTTON_MIDDLE:
-			break;
-		case GLFW_MOUSE_BUTTON_RIGHT:
-			break;
-		default:
-			return;
-		}
-	}*/
-	if (action == GLFW_RELEASE)
-	{
-		switch (button)
-		{
-		case GLFW_MOUSE_BUTTON_LEFT:
-			glfwGetCursorPos(window, &clickPointX_d, &clickPointY_d);
-
-			//// 标准化为0 - 1
-			//clickPointX = static_cast<float>(- 1 + (clickPointX_d / SCR_WIDTH) * 2);
-			//clickPointY = static_cast<float>(- 1 + (clickPointY_d / SCR_HEIGHT) * 2);
-			if (isAddingCurve && sampleRateEnterComplete)
-			{
-				clickPointX = static_cast<float>(clickPointX_d);
-				clickPointY = static_cast<float>(clickPointY_d);
-				LMBRelease_for_verts_input = true;
-			}
-			//std::cout << LMBRelease_for_verts_input << std::endl;
-
-			//std::cout << clickPointX_d << '\t' << clickPointY_d << std::endl;
-			break;
-		case GLFW_MOUSE_BUTTON_MIDDLE:
-			break;
-		case GLFW_MOUSE_BUTTON_RIGHT:
-			break;
-		default:
-			return;
-		}
-	}
-	
-}
-
-
-// glfw 随窗口大小改变，会修改SCR_HEIGHT和SCR_WIDTH的值
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	glViewport(0, 0, width, height);
-	SCR_HEIGHT = height;
-	SCR_WIDTH = width;
-}
-
-
-// 将坐标标准化到-1.0至1.0
-void normalize(float &x, float &y)
-{
-	x = (x - SCR_WIDTH / 2) / (SCR_WIDTH / 2);
-	y = (-y + SCR_HEIGHT / 2) / (SCR_HEIGHT / 2);
-}
-
-
-float calculate_distance_square(float x1, float y1, float x2, float y2)
-{
-	return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-}
-
-
-// 使曲线首尾相接，仅将新曲线的第一个、最后一个点与其他所有先前已绘制的曲线的首尾点相比较（鼠标自动吸附，以屏幕像素坐标系为准）
-void combine_2_verts(float coord[2], float result[2], float thres = 0.010f) // 采用像素坐标时，thres可取10，采用标准化坐标后可取0.01
-{
-	float distance_square_1, distance_square_2;
-	for (int i = 0; i < curves_manager.num_of_curves; ++i)
-	{
-		// 通常更可能与最后一个点相连，故先判断
-		distance_square_2 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[12], curves_manager.curves->ctrl_verts[13]);
-		if (distance_square_2 < thres)
-		{
-			result[0] = curves_manager.curves->ctrl_verts[12];
-			result[1] = curves_manager.curves->ctrl_verts[13];
-			std::cout << "Combine Occurred\n";
-			return;
-		}
-
-		distance_square_1 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[0], curves_manager.curves->ctrl_verts[1]);
-		if (distance_square_1 < thres)
-		{
-			result[0] = curves_manager.curves->ctrl_verts[0];
-			result[1] = curves_manager.curves->ctrl_verts[1];
-			std::cout << "Combine Occurred\n";
-		}
-	}
-}
-
-
-// 合并那些距离很近的控制顶点
-void click_verts_combine(float coords[16], float thres) // 函数声明中设定thres默认值0.010f
-{
-	for (int i = 0; i < 4; ++i)
-	{
-		float vert_coord[2], vert_result[2];
-		// 提取顶点坐标
-		vert_coord[0] = coords[i * 4 + 0];
-		vert_coord[1] = coords[i * 4 + 1];
-		// 与已有的顶点判断是否要合并
-		combine_2_verts(coords, vert_result, thres);
-		// 合并的结果在vert_result中
-		coords[i * 4 + 0] = vert_result[0];
-		coords[i * 4 + 1] = vert_result[1];
-	}
-}
-
-
-// 将曲线数据保存为txt
-void save_curves_to_txt()
-{
-	std::fstream file("CurveDataFile.txt", std::ios::out); // 先清空
-	std::ofstream curveDataFile;
-	curveDataFile.open("CurveDataFile.txt", std::ofstream::app);
-	curveDataFile << "*CURVE_DATA_FILE\n";
-
-	for (int i = 0; i < curves_manager.num_of_curves; ++i)
-	{
-		curveDataFile << "\n*CURVE_INDEX = \n" << i;
-		curveDataFile << "\n*SAMPLE_RATE = \n" << curves_manager.curves[i].sample_rate;
-		curveDataFile << "\n*CURVE_CTRL_VERTS = \n";
-		for (int j = 0; j < 16; ++j)
-		{
-			curveDataFile << curves_manager.curves[i].ctrl_verts[j] << '\t';
-		}
-		curveDataFile << "\n";
-	}
-}
-
-
-// 从txt读取曲线数据
-void read_curves_from_txt() // 这个函数还没写完
-{
-	std::ofstream curveDataFile;
-	curveDataFile.open("CurveDataFile.txt", std::ofstream::app);
-	curveDataFile << "CURVE DATA FILE\n";
-
-	for (int i = 0; i < curves_manager.num_of_curves; ++i)
-	{
-		curveDataFile << "\nCURVE_INDEX = " << i << "\n";
-		curveDataFile << "SAMPLE_RATE = " << curves_manager.curves[i].sample_rate << "\n";
-		curveDataFile << "CURVE_CTRL_VERTS: ";
-		for (int j = 0; j < 16; ++j)
-		{
-			curveDataFile << curves_manager.curves[i].ctrl_verts[j] << '\t';
-		}
-		curveDataFile << "\n";
-	}
 }

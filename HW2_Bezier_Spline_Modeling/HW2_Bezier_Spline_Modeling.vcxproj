@@ -160,6 +160,7 @@
     <ClInclude Include="shader.h" />
     <ClInclude Include="bezier.h" />
     <ClInclude Include="bezier_manager.h" />
+    <ClInclude Include="camera.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\midline.vert" />
