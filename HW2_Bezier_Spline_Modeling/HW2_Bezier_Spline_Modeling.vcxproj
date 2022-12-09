@@ -157,10 +157,11 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="shader.h" />
+    <ClInclude Include="shader1.h" />
     <ClInclude Include="bezier.h" />
     <ClInclude Include="bezier_manager.h" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="shader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\midline.vert" />
@@ -169,6 +170,9 @@
     <None Include="shaders\test.frag" />
     <None Include="shaders\test.vert" />
     <None Include="shaders\test1.frag" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="shaders\tessellation.tess" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

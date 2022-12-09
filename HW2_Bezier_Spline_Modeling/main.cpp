@@ -4,6 +4,7 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+//#include <GL/glew.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -25,6 +26,7 @@
 
 #define M_PI 3.14159265358979323846
 
+
 // 函数声明
 //void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 //void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -34,9 +36,11 @@
 //void save_curves_to_txt();
 //void read_curves_from_txt();
 
+
 // 窗口设置
 unsigned int SCR_WIDTH = 1920;
 unsigned int SCR_HEIGHT = 1080;
+
 
 // 设置相机
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
@@ -44,9 +48,11 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
+
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
+
 
 // 用于记录鼠标状态的3个全局变量
 static bool LMBRelease_for_verts_input;
@@ -54,6 +60,7 @@ static float clickPointX = 0;
 static float clickPointY = 0;
 static double clickPointX_d = 0;
 static double clickPointY_d = 0;
+
 
 // 鼠标点击输入顶点的状态变量
 static bool isAddingCurve = false; // 是否正在添加曲线，如果中途放弃添加则立刻将该值置为false
@@ -66,8 +73,10 @@ static bool vertClicked = false; // 如果正在添加顶点，鼠标是否按下，若按下则停止
 static bool mouseAlreadyDown = false; // 用于处理鼠标按下再松开时的标记
 static bool goToNextVert[3] = { false };
 
+
 // 用一个manager作为集合来管理所有曲线
 static bezier_manager curves_manager;
+
 
 // 用于渲染控制顶点正方形的两个小三角形顶点
 float quad[] = {
@@ -79,15 +88,12 @@ float quad[] = {
 	 1.0f, -1.0f
 };
 
+
 // 旋转轴两端点，相当于y轴的位置
 float midline_point[] = {
 	0.0f,  0.5f,
 	0.0f, -0.5f
 };
-
-
-
-
 
 
 // 阶段1：处理输入
@@ -470,7 +476,7 @@ void read_curves_from_txt()
 }*/
 
 
-// int main()
+// 原int main()，现用于添加曲线阶段，将曲线写入全局变量curve_manager
 void modeling_addCurve()
 {
 	/*----------初始化----------*/
@@ -480,6 +486,7 @@ void modeling_addCurve()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_REFRESH_RATE, 5);
+	// glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
 	// glfw 创建窗口
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "HW2 Bezier Curve Modeling", nullptr, nullptr);
@@ -933,7 +940,7 @@ void modeling_addCurve()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	} // 渲染循环结束
-
+	glfwSetWindowShouldClose(window, false);
 	save_curves_to_txt();
 	glfwTerminate();
 	//return 0;
@@ -949,6 +956,7 @@ void modeling_rotate_scan()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_REFRESH_RATE, 5);
+	// glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
 	// glfw 创建窗口
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "HW2 Bezier Curve Modeling", nullptr, nullptr);
@@ -981,6 +989,135 @@ void modeling_rotate_scan()
 	Shader rotate_shader("./shaders/rotate_scan.vert", "./shaders/test.frag");
 
 
+	int amount = 4; // 总共要有多少个
+	float delta_degree = 360 / static_cast<float>(amount); // 间隔的角度
+	std::cout << "delta_degree = " << delta_degree << '\n';
+	bezier_manager* rotate_curves = new bezier_manager[amount];
+
+	glm::mat4* trans_mats = new glm::mat4[amount];
+	unsigned int* transformLoc = new unsigned int[amount];
+
+	for (int i = 0; i < amount; ++i) // 间隔10°
+	{
+		trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree), glm::vec3(0.0, 1.0, 0.0));
+		transformLoc[i] = glGetUniformLocation(rotate_shader.ID, "transform");
+
+		//for (int j = 0; j < curves_manager.num_of_curves; ++j)
+		//{
+		//	rotate_curves[i].curves[j].sample_rate = curves_manager.curves[j].sample_rate;
+		//	for (int k = 0; k < 16; ++k)
+		//	{
+		//		rotate_curves[i].curves[j].ctrl_verts[k] = curves_manager.curves[j].ctrl_verts[k];
+		//		
+		//	}
+		//	for (int k = 0; k <= rotate_curves[i].curves[j].sample_rate; ++k)
+		//	{
+		//		rotate_curves[i].curves[j].disp_verts[k] = curves_manager.curves[j].disp_verts[k];
+		//	}
+		//}
+	}
+
+	// 用一个数组整合curve_manager中的所有disp_verts
+	int total_sample_verts = 0;
+	for (int i = 0; i < curves_manager.num_of_curves; ++i) // 所有采样点的数量
+	{
+		total_sample_verts += (curves_manager.curves[i].sample_rate + 1);
+	} // 注意total_sample_verts没有乘4
+	float* all_disp_verts_in_1_curve = new float[4 * total_sample_verts];
+	int all_disp_verts_in_1_curve_count = 0;
+	for (int i = 0; i < curves_manager.num_of_curves; ++i)
+	{
+		for (int j = 0; j < curves_manager.curves[i].sample_rate + 1; ++j)
+		{
+			for (int k = 0; k < 4; ++k)
+			{
+				all_disp_verts_in_1_curve[all_disp_verts_in_1_curve_count] = curves_manager.curves[i].disp_verts[4 * j + k];
+				all_disp_verts_in_1_curve_count += 1;
+			}
+		}
+	} // 至此，curve_manager中的所有disp_verts都已拷贝到数组all_disp_verts_in_1_curve中，且数组长度为all_disp_verts_in_1_curve_count
+	//std::cout << all_disp_verts_in_1_curve_count << '\t' << total_sample_verts;
+
+	//unsigned int VAO[36], VBO[36];
+	//glGenVertexArrays(36, VAO);
+	//glGenBuffers(36, VBO);
+
+	unsigned int one_curve_VAO, one_curve_VBO;
+	glGenVertexArrays(1, &one_curve_VAO);
+	glGenBuffers(1, &one_curve_VBO);
+
+	unsigned int curve_instance_VBO;
+	glGenBuffers(1, &curve_instance_VBO);
+
+	glBindVertexArray(one_curve_VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, one_curve_VBO);
+	glBufferData(GL_ARRAY_BUFFER, all_disp_verts_in_1_curve_count * sizeof(float), &all_disp_verts_in_1_curve[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// 将1个curve_manager作为一个实例
+	glBindBuffer(GL_ARRAY_BUFFER, curve_instance_VBO);
+	glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &trans_mats[0], GL_STATIC_DRAW); // 传入变换矩阵
+
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)0);
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+	glEnableVertexAttribArray(5);
+	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+	glEnableVertexAttribArray(6);
+	glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+
+	glVertexAttribDivisor(3, 1);
+	glVertexAttribDivisor(4, 1);
+	glVertexAttribDivisor(5, 1);
+	glVertexAttribDivisor(6, 1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+
+
+	while (!glfwWindowShouldClose(window))
+	{
+		float currentFrame = static_cast<float>(glfwGetTime());
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+		processInput2(window);
+
+		// render
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// configure transformation matrices
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+		glm::mat4 view = camera.GetViewMatrix();
+
+		int projectionLoc = glGetUniformLocation(rotate_shader.ID, "projection");
+		int viewLoc = glGetUniformLocation(rotate_shader.ID, "view");
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+		rotate_shader.use();
+		rotate_shader.setVec3("color", 1.0f, 1.0f, 1.0f);
+		rotate_shader.setFloat("scale", 1.0f);
+		
+		glBindVertexArray(one_curve_VAO);
+		glDrawArraysInstanced(GL_LINE_STRIP, 0, total_sample_verts, amount);
+
+		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+		// -------------------------------------------------------------------------------
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
+
+
+	delete[] transformLoc;
+	delete[] trans_mats;
+	delete[] all_disp_verts_in_1_curve;
+	delete[] rotate_curves;
 	glfwTerminate();
 }
 
@@ -988,10 +1125,10 @@ int main()
 {
 	// 第1阶段：添加曲线，实现了添加曲线过程的可视化和交互，结果保存在全局变量curve_manager中
 	modeling_addCurve();
-
+	Sleep(1000);
 
 	// 第2阶段：生成旋转体，预览模型
-
+	modeling_rotate_scan();
 
 	// 第3阶段：导出模型
 
