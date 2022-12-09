@@ -32,7 +32,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="shader.h">
+    <ClInclude Include="shader1.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="bezier.h">
@@ -42,6 +42,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="camera.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="shader.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -64,5 +67,13 @@
     <None Include="shaders\rotate_scan.vert">
       <Filter>资源文件\shaders</Filter>
     </None>
+    <None Include="shaders\to_mesh.vert">
+      <Filter>资源文件\shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="shaders\tessellation.tess">
+      <Filter>资源文件\shaders</Filter>
+    </Text>
   </ItemGroup>
 </Project>
