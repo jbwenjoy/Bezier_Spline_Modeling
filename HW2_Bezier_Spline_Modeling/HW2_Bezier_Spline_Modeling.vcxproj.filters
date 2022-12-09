@@ -76,4 +76,9 @@
       <Filter>资源文件\shaders</Filter>
     </Text>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="shaders\tessellation.tess">
+      <Filter>资源文件\shaders</Filter>
+    </Text>
+  </ItemGroup>
 </Project>
