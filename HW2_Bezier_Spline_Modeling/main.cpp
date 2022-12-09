@@ -1235,17 +1235,28 @@ void model_convert_to_mesh()
 	// --------顶点与三角面片拓扑关系分析--------
 	// 理论应当有amount * (total_sample_verts - 1)个四边形，每个四边形又分成两个小三角形
 	// 共应有2 * amount * (total_sample_verts - 1)个小三角形
+	// (total_sample_verts - 1)相当于一个curve_manager的采样率
 	// 索引绘制的数组需要保存每个三角形与哪些顶点相连
-	// 第i（从0开始）个三角形：
-	// i偶数时：
 	//
-	// i奇数时：
-	// 
+	// 第i（从0开始）个三角形：
+	//
+	// i偶数时的顶点为第：
+	// i/(2*(total_sample_verts - 1))*total_sample_verts + i%(2*(total_sample_verts - 1))/2
+	// i/(2*(total_sample_verts - 1))*total_sample_verts + i%(2*(total_sample_verts - 1))/2 + 1
+	// i/(2*(total_sample_verts - 1))*total_sample_verts + i%(2*(total_sample_verts - 1))/2 + total_sample_verts
+	// 个顶点
+	//
+	// i奇数时的顶点为第：
+	//
+	//
+	//
+	// 个顶点
+	// 注意没有乘4
 
 	int* indices = new int[2 * amount * (total_sample_verts - 1)];
 
 
-// 保存顶点拓扑关系的索引数组
+	// 保存顶点拓扑关系的索引数组
 
 
 
