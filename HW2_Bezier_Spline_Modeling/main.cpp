@@ -106,7 +106,9 @@ void processInput(GLFWwindow* window)
 }
 
 
-// 阶段2：处理输入
+
+bool use_mouse_to_click = false;
+// 阶段23：处理输入
 void processInput2(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -124,6 +126,13 @@ void processInput2(GLFWwindow* window)
 		camera.ProcessKeyboard(UP, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
 		camera.ProcessKeyboard(DOWN, deltaTime);
+
+	// 按下LAlt以使用鼠标点击ImGui界面
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
+		use_mouse_to_click = true;
+	// 按下RAlt以使用鼠标控制相机
+	if (glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS)
+		use_mouse_to_click = false;
 }
 
 // 阶段1：处理鼠标事件和位置
@@ -176,26 +185,29 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 }
 
 
-// 阶段2：处理鼠标输入
+// 阶段23：处理鼠标输入
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
-	float xpos = static_cast<float>(xposIn);
-	float ypos = static_cast<float>(yposIn);
-
-	if (firstMouse)
+	if (use_mouse_to_click == false)
 	{
+		float xpos = static_cast<float>(xposIn);
+		float ypos = static_cast<float>(yposIn);
+
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+
+		float xoffset = xpos - lastX;
+		float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
 		lastX = xpos;
 		lastY = ypos;
-		firstMouse = false;
+
+		camera.ProcessMouseMovement(xoffset, yoffset);
 	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-	lastX = xpos;
-	lastY = ypos;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 
@@ -837,25 +849,6 @@ void modeling_addCurve()
 		curves_manager.updategl(curveVAO, curveVBO, pointVAO, pointVBO, instanceVBO);
 
 
-		/*----------曲线输入完成，开始旋转扫描建模----------*/
-
-		//bezier_manager rotate_curves[36];
-		//for (int i = 0; i < 36; ++i) // 间隔10°
-		//{
-		//	glm::mat4 trans;
-		//	trans = glm::rotate(trans, glm::radians(10.0f), glm::vec3(0.0, 1.0, 0.0));
-		//	unsigned int transformLoc = glGetUniformLocation(rotate_shader.ID, "transform");
-		//	for (int j = 0; j < curves_manager.num_of_curves; ++j)
-		//	{
-		//		rotate_curves[i].curves[j].sample_rate = curves_manager.curves[j].sample_rate;
-		//		for (int k = 0; k < 16; ++k)
-		//		{
-		//			rotate_curves[i].curves[j].ctrl_verts[k] = curves_manager.curves[j].ctrl_verts[k];
-		//		}
-		//	}
-		//}
-
-
 		/*----------glClear，在此之后才能draw----------*/
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -884,7 +877,8 @@ void modeling_addCurve()
 		for (int i = 0; i < curves_manager.num_of_curves; ++i)
 		{
 			glBindVertexArray(curveVAO[i]);
-			glDrawArrays(GL_LINE_STRIP, 0, curves_manager.curves[i].sample_rate + 1);
+			//glDrawArrays(GL_LINE_STRIP, 0, curves_manager.curves[i].sample_rate + 1);
+			glDrawArrays(GL_POINTS, 0, curves_manager.curves[i].sample_rate + 1);
 		}
 
 		shader2.use();
@@ -944,6 +938,11 @@ void modeling_addCurve()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	} // 渲染循环结束
+
+	// ImGui结束
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	glfwSetWindowShouldClose(window, false); // 重置关闭窗口的状态
 	save_curves_to_txt();
@@ -1170,20 +1169,20 @@ void model_convert_to_mesh()
 	Shader to_mesh_shader("./shaders/to_mesh.vert", "./shaders/to_mesh.frag");
 
 
-	int amount = 8; // 总共要有多少个curve_manager（即经线），会影响delta_degree
+	int amount = 36; // 总共要有多少个curve_manager（即经线），会影响delta_degree
 	float delta_degree = 360 / static_cast<float>(amount); // 间隔的角度
 	std::cout << "delta_degree = " << delta_degree << '\n';
 	bezier_manager* rotate_curves = new bezier_manager[amount];
 
 	glm::mat4* trans_mats = new glm::mat4[amount];
-	unsigned int* transformLoc = new unsigned int[amount];
+	//unsigned int* transformLoc = new unsigned int[amount];
 
 	for (int i = 0; i < amount; ++i) // 间隔10°
 	{
 		trans_mats[i] = glm::mat4(1.0f);
 		trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree), glm::vec3(0.0, 1.0, 0.0));
 		//trans_mats[i] = glm::rotate(trans_mats[i], 2 * i * M_PI / amount, glm::vec3(0.0, 1.0, 0.0));
-		transformLoc[i] = glGetUniformLocation(to_mesh_shader.ID, "transform");
+		//transformLoc[i] = glGetUniformLocation(to_mesh_shader.ID, "transform");
 	}
 
 	
@@ -1280,6 +1279,259 @@ void model_convert_to_mesh()
 	}
 
 
+
+
+
+	unsigned int VAO, VBO, EBO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(&all_verts_3d[0]), all_verts_3d, GL_DYNAMIC_DRAW);
+	std::cout << "all_verts_3d:\n" << "size = " << sizeof(all_verts_3d) << std::endl;
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(&indices[0]), indices, GL_DYNAMIC_DRAW);
+	std::cout << "indices:\n" << "size = " << sizeof(indices) << std::endl;
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	std::cout << "\namount = " << amount << "\narraylength_of_disp_verts_in_1_manager = " << arraylength_of_disp_verts_in_1_manager << "\ntotal_sample_verts_1_manager = " << total_sample_verts_1_manager << std::endl;
+
+
+	// 配置Dear ImGui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	// 设置风格
+	ImGui::StyleColorsDark();
+	// 设置平台
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 330");
+
+	// 是否需要在渲染循环中重新计算顶点位置和拓扑关系
+	bool changed = false;
+	// 是否采用线框模式绘制
+	bool polygon_line = false;
+
+	// 渲染循环
+	while (!glfwWindowShouldClose(window))
+	{
+		if (use_mouse_to_click == true)
+		{
+			// 取消鼠标回调函数
+			glfwSetCursorPosCallback(window, NULL);
+			// 取消捕捉鼠标
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+		else
+		{
+			// 重新激活鼠标回调函数
+			glfwSetCursorPosCallback(window, mouse_callback);
+			// 重新捕捉鼠标
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+
+		float currentFrame = static_cast<float>(glfwGetTime());
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+		processInput2(window);
+
+		glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// 视觉变换矩阵
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+		glm::mat4 view = camera.GetViewMatrix();
+		int projectionLoc = glGetUniformLocation(to_mesh_shader.ID, "projection");
+		int viewLoc = glGetUniformLocation(to_mesh_shader.ID, "view");
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+
+		// Start the Dear ImGui frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		
+		// ImGui 窗口设置
+		ImGui::SetWindowPos(ImVec2(2, 2));
+		ImGui::SetWindowSize(ImVec2(600, 400));
+		ImGui::Begin("Control Panel");
+		ImGui::Text("Manage the Sample Accuracy Here.");
+
+		
+		ImGui::Checkbox("PolygonMode = LINE?", &polygon_line);
+		if (polygon_line)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		int sample_rate_for_change = curves_manager.curves[0].sample_rate;
+		int old_sample_rate = sample_rate_for_change;
+		int old_amount = amount;
+		ImGui::InputInt("Sample Rate of Bezier curve", &sample_rate_for_change);
+		if (sample_rate_for_change < 1)
+			sample_rate_for_change = 1;
+		ImGui::InputInt("Sample Rate of Scanning", &amount);
+		if (amount < 2)
+			amount = 2;
+
+		// 发生改变
+		if (old_sample_rate != sample_rate_for_change || old_amount != amount)
+		{
+			changed = true;
+			if (old_sample_rate != sample_rate_for_change)
+			{
+				for (int i = 0; i < curves_manager.num_of_curves; ++i)
+				{
+					curves_manager.curves[i].sample_rate = sample_rate_for_change;
+					curves_manager.curves[i].update();
+				}
+			}
+		}
+
+
+		// 手动更新采样精度
+		if (changed == true)
+		{
+			delta_degree = 360 / static_cast<float>(amount); // 间隔的角度
+			std::cout << "delta_degree = " << delta_degree << '\n';
+
+			delete[] rotate_curves;
+			rotate_curves = new bezier_manager[amount];
+		
+			delete[] trans_mats;
+			trans_mats = new glm::mat4[amount];
+		
+			//delete[] transformLoc;
+			//transformLoc = new unsigned int[amount];
+		
+			for (int i = 0; i < amount; ++i) // 间隔10°
+			{
+				trans_mats[i] = glm::mat4(1.0f);
+				trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree), glm::vec3(0.0, 1.0, 0.0));
+				//trans_mats[i] = glm::rotate(trans_mats[i], 2 * i * M_PI / amount, glm::vec3(0.0, 1.0, 0.0));
+				//transformLoc[i] = glGetUniformLocation(to_mesh_shader.ID, "transform");
+			}
+		
+		
+			// 1个manager下的采样点数
+			total_sample_verts_1_manager = 0;
+			for (int i = 0; i < curves_manager.num_of_curves; ++i) // 一个curve_manager中所有采样点的数量
+			{
+				total_sample_verts_1_manager += (curves_manager.curves[i].sample_rate + 1);
+			} // 注意total_sample_verts_1_manager没有乘4
+		
+			// 包含1个curve_manager中的所有disp_verts
+			delete[] all_disp_verts_in_1_manager;
+			all_disp_verts_in_1_manager = new float[4 * total_sample_verts_1_manager];
+
+			arraylength_of_disp_verts_in_1_manager = 0; // 表示包含一次绘制中所有顶点的float数组的长度
+			// 将数据拷贝到all_disp_verts_in_1_manager中
+			for (int i = 0; i < curves_manager.num_of_curves; ++i)
+			{
+				for (int j = 0; j < curves_manager.curves[i].sample_rate + 1; ++j)
+				{
+					for (int k = 0; k < 4; ++k)
+					{
+						all_disp_verts_in_1_manager[arraylength_of_disp_verts_in_1_manager] = curves_manager.curves[i].disp_verts[4 * j + k];
+						arraylength_of_disp_verts_in_1_manager += 1;
+					}
+				}
+			} // 至此，curve_manager中的所有disp_verts都已拷贝到数组all_disp_verts_in_1_manager中，且数组长度为arraylength_of_disp_verts_in_1_manager
+			//std::cout << arraylength_of_disp_verts_in_1_manager << '\t' << total_sample_verts_1_manager;
+		
+		
+			// 3d模型总顶点数
+			total_sample_verts_3d = amount * total_sample_verts_1_manager;
+		
+			// 保存三维模型所有顶点的大数组
+			delete[] all_verts_3d;
+			all_verts_3d = new float[4 * total_sample_verts_3d];
+			all_verts_3d_length = 0;
+			// 对每个显示点做变换
+			for (int j = 0; j < amount; ++j)
+			{
+				for (int i = 0; i < total_sample_verts_1_manager; ++i)
+				{
+					float x = all_disp_verts_in_1_manager[4 * i + 0];
+					float y = all_disp_verts_in_1_manager[4 * i + 1];
+					float z = all_disp_verts_in_1_manager[4 * i + 2];
+					float w = all_disp_verts_in_1_manager[4 * i + 3];
+					glm::vec4 coord(x, y, z, w);
+		
+					glm::vec4 result = trans_mats[j] * coord;
+					all_verts_3d[all_verts_3d_length++] = result.x;
+					all_verts_3d[all_verts_3d_length++] = result.y;
+					all_verts_3d[all_verts_3d_length++] = result.z;
+					all_verts_3d[all_verts_3d_length++] = result.w;
+				}
+			} // 至此，3d模型所有顶点均被保存在大数组all_verts_3d中，all_verts_3d_lengt和amount * arraylength_of_disp_verts_in_1_manager均为其长度
+			std::cout << "\nall_verts_3d_length = " << all_verts_3d_length << "\ntotal_sample_verts_3d = " << total_sample_verts_3d << std::endl;
+		
+		
+			// 保存三角形与顶点拓扑关系的索引数组
+			delete[] indices;
+			indices = new unsigned int[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
+			for (int i = 0; i < 2 * amount * (total_sample_verts_1_manager - 1); ++i)
+			{
+				if (i % 2 == 0)
+				{
+					indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2) % total_sample_verts_3d;
+					indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
+					indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
+				}
+				if (i % 2 == 1)
+				{
+					indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
+					indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
+					indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager + 1) % total_sample_verts_3d;
+				}
+			}
+			changed = false;
+		}
+
+		// 更新VAO、VBO、EBO
+		glBindVertexArray(VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(float), all_verts_3d, GL_DYNAMIC_DRAW);
+		//std::cout << "all_verts_3d:\n" << "size = " << sizeof(all_verts_3d) << std::endl;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
+		//std::cout << "indices:\n" << "size = " << sizeof(indices) << std::endl;
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+		glBindVertexArray(0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+
+		to_mesh_shader.use();
+		to_mesh_shader.setVec3("color", 1.0f, 1.0f, 1.0f);
+
+		glBindVertexArray(VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		//glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDrawElements(GL_TRIANGLES, 3 * 2 * amount * (total_sample_verts_1_manager - 1), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+
+		ImGui::End();
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
+
 	// 把indices的数据写出来检查
 	std::fstream IndicesDataFile("IndicesData.txt", std::ios::out); // 先清空
 	std::ofstream IndicesDataOutput;
@@ -1305,71 +1557,13 @@ void model_convert_to_mesh()
 		VertsData3dOutput << all_verts_3d[4 * i + 2] << '\t';
 		VertsData3dOutput << all_verts_3d[4 * i + 3] << '\n';
 	}
+
 	
-
-
-	unsigned int VAO, VBO, EBO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(&all_verts_3d[0]), &all_verts_3d[0], GL_STATIC_DRAW);
-	std::cout << "all_verts_3d:\n" << "size = " << sizeof(all_verts_3d) << std::endl;
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(&indices[0]), &indices[0], GL_STATIC_DRAW);
-	std::cout << "indices:\n" << "size = " << sizeof(indices) << std::endl;
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glBindVertexArray(0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	std::cout << "\namount = " << amount << "\narraylength_of_disp_verts_in_1_manager = " << arraylength_of_disp_verts_in_1_manager << "\ntotal_sample_verts_1_manager = " << total_sample_verts_1_manager << std::endl;
-
-	while (!glfwWindowShouldClose(window))
-	{
-		float currentFrame = static_cast<float>(glfwGetTime());
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-		processInput2(window);
-
-		// render
-		glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// configure transformation matrices
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
-		glm::mat4 view = camera.GetViewMatrix();
-		int projectionLoc = glGetUniformLocation(to_mesh_shader.ID, "projection");
-		int viewLoc = glGetUniformLocation(to_mesh_shader.ID, "view");
-		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
-
-		to_mesh_shader.use();
-		to_mesh_shader.setVec3("color", 1.0f, 1.0f, 1.0f);
-				
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glBindVertexArray(VAO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		//glDrawArrays(GL_TRIANGLES, 0, 6);
-		glDrawElements(GL_TRIANGLES, 3 * 2 * amount * (total_sample_verts_1_manager - 1), GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-		// -------------------------------------------------------------------------------
-		glfwSwapBuffers(window);
-		glfwPollEvents();
-	}
-
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 	glfwSetWindowShouldClose(window, false); // 重置关闭窗口的状态
-	delete[] transformLoc;
+	//delete[] transformLoc;
 	delete[] trans_mats;
 	delete[] all_disp_verts_in_1_manager;
 	delete[] rotate_curves;
@@ -1387,12 +1581,12 @@ int main()
 	// 第1阶段：添加曲线，实现了添加曲线过程的可视化和交互，结果保存在全局变量curve_manager中
 	std::cout << "\n1. Enter SampleRate and Control Vertexes\n";
 	modeling_addCurve();
-	Sleep(500);
+	//Sleep(500);
 
 	// 第2阶段：生成旋转体，预览模型
 	std::cout << "\n2. Preview Rotate Scan\n";
 	modeling_rotate_scan();
-	Sleep(500);
+	//Sleep(500);
 
 	// 第3阶段：生成网格
 	std::cout << "\n3. Preview Mesh Model\n";
