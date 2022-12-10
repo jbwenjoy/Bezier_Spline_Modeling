@@ -170,13 +170,11 @@
     <None Include="shaders\test.frag" />
     <None Include="shaders\test.vert" />
     <None Include="shaders\test1.frag" />
+    <None Include="shaders\to_mesh.frag" />
     <None Include="shaders\to_mesh.vert" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="shaders\tessellation.tess" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="shaders\tessellation.tess" />
+    <Text Include="tessellation.tess" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

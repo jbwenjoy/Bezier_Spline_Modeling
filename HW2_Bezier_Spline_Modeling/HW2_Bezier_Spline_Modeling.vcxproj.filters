@@ -70,14 +70,12 @@
     <None Include="shaders\to_mesh.vert">
       <Filter>资源文件\shaders</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="shaders\tessellation.tess">
+    <None Include="shaders\to_mesh.frag">
       <Filter>资源文件\shaders</Filter>
-    </Text>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="shaders\tessellation.tess">
+    <Text Include="tessellation.tess">
       <Filter>资源文件\shaders</Filter>
     </Text>
   </ItemGroup>
