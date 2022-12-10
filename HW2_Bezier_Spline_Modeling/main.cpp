@@ -43,7 +43,7 @@ unsigned int SCR_HEIGHT = 1080;
 
 
 // 设置相机
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -1317,7 +1317,9 @@ void model_convert_to_mesh()
 	// 是否需要在渲染循环中重新计算顶点位置和拓扑关系
 	bool changed = false;
 	// 是否采用线框模式绘制
-	bool polygon_line = false;
+	bool polygon_line = true;
+	// 是否手动改变采样率
+	bool manually_change_sample_rate = false;
 
 	// 渲染循环
 	while (!glfwWindowShouldClose(window))
@@ -1348,6 +1350,7 @@ void model_convert_to_mesh()
 		// 视觉变换矩阵
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
+		float dist_to_model = sqrt(camera.Position.x * camera.Position.x + camera.Position.y * camera.Position.y + camera.Position.z * camera.Position.z);
 		int projectionLoc = glGetUniformLocation(to_mesh_shader.ID, "projection");
 		int viewLoc = glGetUniformLocation(to_mesh_shader.ID, "view");
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -1363,6 +1366,9 @@ void model_convert_to_mesh()
 		ImGui::SetWindowPos(ImVec2(2, 2));
 		ImGui::SetWindowSize(ImVec2(600, 400));
 		ImGui::Begin("Control Panel");
+		ImGui::Text("Camera Pos = (%g, %g, %g)", camera.Position.x, camera.Position.y, camera.Position.z);
+		ImGui::Text("Dist to Model = %g", dist_to_model);
+
 		ImGui::Text("Manage the Sample Accuracy Here.");
 
 		
@@ -1372,15 +1378,45 @@ void model_convert_to_mesh()
 		else
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+		ImGui::Checkbox("Manually Change Sample Rate?", &manually_change_sample_rate);
+
 		int sample_rate_for_change = curves_manager.curves[0].sample_rate;
 		int old_sample_rate = sample_rate_for_change;
 		int old_amount = amount;
-		ImGui::InputInt("Sample Rate of Bezier curve", &sample_rate_for_change);
-		if (sample_rate_for_change < 1)
-			sample_rate_for_change = 1;
-		ImGui::InputInt("Sample Rate of Scanning", &amount);
-		if (amount < 2)
-			amount = 2;
+
+		if (manually_change_sample_rate)
+		{
+			ImGui::InputInt("Sample Rate of Bezier curve", &sample_rate_for_change);
+			ImGui::InputInt("Sample Rate of Scanning", &amount);
+			// 保证采样率合法且不太大
+			if (sample_rate_for_change < 4)
+				sample_rate_for_change = 4;
+			if (sample_rate_for_change > 100)
+				sample_rate_for_change = 100;
+			if (amount < 4)
+				amount = 4;
+			if (amount > 180)
+				amount = 180;
+		}
+		else
+		{
+			if (dist_to_model < 1.5f) dist_to_model = 1.5f;
+			sample_rate_for_change = 100 / static_cast<int>(dist_to_model);
+			amount = 72 / static_cast<int>(dist_to_model);
+			// 保证采样率合法且不太大
+			if (sample_rate_for_change < 4)
+				sample_rate_for_change = 4;
+			if (sample_rate_for_change > 100)
+				sample_rate_for_change = 100;
+			if (amount < 4)
+				amount = 4;
+			if (amount > 180)
+				amount = 180;
+			ImGui::Text("Sample Rate of Bezier curve = %d", sample_rate_for_change);
+			ImGui::Text("Sample Rate of Scanning = %d", amount);
+		}
+
+		
 
 		// 发生改变
 		if (old_sample_rate != sample_rate_for_change || old_amount != amount)
