@@ -109,7 +109,7 @@ void bezier_line_4_vertex::calculate_curve()
 
 	for (int i = 0; i <= sample_rate; ++i)
 	{
-		float t = static_cast<float>(i) / sample_rate;
+		float t = 1 - static_cast<float>(i) / sample_rate;
 
 		// µÚÒ»²ã
 		auto result = get_t_point(ctrl_0v0, ctrl_0v1, t);

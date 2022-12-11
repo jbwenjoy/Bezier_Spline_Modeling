@@ -43,7 +43,7 @@ unsigned int SCR_HEIGHT = 1080;
 
 
 // 设置相机
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 2.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -993,44 +993,33 @@ void modeling_rotate_scan()
 	Shader rotate_shader("./shaders/rotate_scan.vert", "./shaders/test.frag");
 
 
-	int amount = 8; // 总共要有多少个
-	float delta_degree = 360 / static_cast<float>(amount); // 间隔的角度
+	int amount = 4; // 旋转方向上总共要有多少条经线
+	float delta_degree = 360 / static_cast<float>(amount); // 经线间隔的角度
 	std::cout << "delta_degree = " << delta_degree << '\n';
-	bezier_manager* rotate_curves = new bezier_manager[amount];
 
-	glm::mat4* trans_mats = new glm::mat4[amount];
-	unsigned int* transformLoc = new unsigned int[amount];
+	bezier_manager* rotate_curves = new bezier_manager[amount]; // 存储旋转变换后的曲线
+	glm::mat4* trans_mats = new glm::mat4[amount]; // 存储绕y轴旋转不同角度的矩阵
+	unsigned int* transformLoc = new unsigned int[amount]; // 存储uniform的位置
 
-	for (int i = 0; i < amount; ++i) // 间隔10°
+	for (int i = 0; i < amount; ++i)
 	{
-		trans_mats[i] = glm::mat4(1.0f);
 		trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree), glm::vec3(0.0, 1.0, 0.0));
-		//trans_mats[i] = glm::rotate(trans_mats[i], 2 * i * M_PI / amount, glm::vec3(0.0, 1.0, 0.0));
 		transformLoc[i] = glGetUniformLocation(rotate_shader.ID, "transform");
-
-		//for (int j = 0; j < curves_manager.num_of_curves; ++j)
-		//{
-		//	rotate_curves[i].curves[j].sample_rate = curves_manager.curves[j].sample_rate;
-		//	for (int k = 0; k < 16; ++k)
-		//	{
-		//		rotate_curves[i].curves[j].ctrl_verts[k] = curves_manager.curves[j].ctrl_verts[k];
-		//		
-		//	}
-		//	for (int k = 0; k <= rotate_curves[i].curves[j].sample_rate; ++k)
-		//	{
-		//		rotate_curves[i].curves[j].disp_verts[k] = curves_manager.curves[j].disp_verts[k];
-		//	}
-		//}
 	}
 
-	// 用一个数组整合curve_manager中的所有disp_verts
+	
+	// 1个curve_manager中的总disp_vert数
 	int total_sample_verts_1_manager = 0;
-	for (int i = 0; i < curves_manager.num_of_curves; ++i) // 所有采样点的数量
+	for (int i = 0; i < curves_manager.num_of_curves; ++i) // 所有采样点的数量，注意即使在添加曲线时勾选了“从前一条曲线的最后一个点开始添加下一条曲线”，仍然会将这个共用点保存两次
 	{
 		total_sample_verts_1_manager += (curves_manager.curves[i].sample_rate + 1);
-	} // 注意total_sample_verts_1_manager没有乘4
+	} // 注意total_sample_verts_1_manager不乘4
+
+	// 注意最后一条经线的等效采样率其实是total_sample_verts_1_manager - 1
+
+	// 整合1个curve_manager中的所有disp_verts
 	float* all_disp_verts_in_1_manager = new float[4 * total_sample_verts_1_manager];
-	int arraylength_of_disp_verts_in_1_manager = 0; // 表示包含一次绘制中所有顶点的float数组的长度
+	int arraylength_of_disp_verts_in_1_manager = 0; // 相当于一个计数器，为循环拷贝数据提供方便，最终的值为数组的长度
 	for (int i = 0; i < curves_manager.num_of_curves; ++i)
 	{
 		for (int j = 0; j < curves_manager.curves[i].sample_rate + 1; ++j)
@@ -1044,10 +1033,6 @@ void modeling_rotate_scan()
 	} // 至此，curve_manager中的所有disp_verts都已拷贝到数组all_disp_verts_in_1_manager中，且数组长度为arraylength_of_disp_verts_in_1_manager
 	//std::cout << arraylength_of_disp_verts_in_1_manager << '\t' << total_sample_verts_1_manager;
 
-	//unsigned int VAO[36], VBO[36];
-	//glGenVertexArrays(36, VAO);
-	//glGenBuffers(36, VBO);
-
 	unsigned int one_curve_VAO, one_curve_VBO;
 	glGenVertexArrays(1, &one_curve_VAO);
 	glGenBuffers(1, &one_curve_VBO);
@@ -1057,7 +1042,7 @@ void modeling_rotate_scan()
 
 	glBindVertexArray(one_curve_VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, one_curve_VBO);
-	glBufferData(GL_ARRAY_BUFFER, arraylength_of_disp_verts_in_1_manager * sizeof(float), &all_disp_verts_in_1_manager[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (4 * total_sample_verts_1_manager) * sizeof(float), &all_disp_verts_in_1_manager[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -1066,14 +1051,15 @@ void modeling_rotate_scan()
 	glBindBuffer(GL_ARRAY_BUFFER, curve_instance_VBO);
 	glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &trans_mats[0], GL_STATIC_DRAW); // 传入变换矩阵
 
+	// 将glm::mat4拆成4个vec4传入
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)0);
+	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)0);
 	glEnableVertexAttribArray(4);
-	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(sizeof(glm::vec4)));
 	glEnableVertexAttribArray(5);
-	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+	glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(2 * sizeof(glm::vec4)));
 	glEnableVertexAttribArray(6);
-	glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+	glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(3 * sizeof(glm::vec4)));
 
 	glVertexAttribDivisor(3, 1);
 	glVertexAttribDivisor(4, 1);
@@ -1350,12 +1336,13 @@ void model_convert_to_mesh()
 		// 视觉变换矩阵
 		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		float dist_to_model = sqrt(camera.Position.x * camera.Position.x + camera.Position.y * camera.Position.y + camera.Position.z * camera.Position.z);
 		int projectionLoc = glGetUniformLocation(to_mesh_shader.ID, "projection");
 		int viewLoc = glGetUniformLocation(to_mesh_shader.ID, "view");
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
+		// 相机到模型的距离
+		float dist_to_model = sqrt(camera.Position.x * camera.Position.x + camera.Position.y * camera.Position.y + camera.Position.z * camera.Position.z);
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
@@ -1371,47 +1358,48 @@ void model_convert_to_mesh()
 
 		ImGui::Text("Manage the Sample Accuracy Here.");
 
-		
+		// 允许手动设定是否采用线框模式
 		ImGui::Checkbox("PolygonMode = LINE?", &polygon_line);
 		if (polygon_line)
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		else
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+		// 允许手动改变采样率
 		ImGui::Checkbox("Manually Change Sample Rate?", &manually_change_sample_rate);
 
 		int sample_rate_for_change = curves_manager.curves[0].sample_rate;
 		int old_sample_rate = sample_rate_for_change;
 		int old_amount = amount;
 
-		if (manually_change_sample_rate)
+		if (manually_change_sample_rate) // 手动修改模型采样精度
 		{
 			ImGui::InputInt("Sample Rate of Bezier curve", &sample_rate_for_change);
 			ImGui::InputInt("Sample Rate of Scanning", &amount);
 			// 保证采样率合法且不太大
 			if (sample_rate_for_change < 4)
 				sample_rate_for_change = 4;
-			if (sample_rate_for_change > 100)
-				sample_rate_for_change = 100;
+			if (sample_rate_for_change > 60)
+				sample_rate_for_change = 60;
 			if (amount < 4)
 				amount = 4;
-			if (amount > 180)
-				amount = 180;
+			if (amount > 90)
+				amount = 90;
 		}
-		else
+		else // 自动根据距离调整模型精度
 		{
 			if (dist_to_model < 1.5f) dist_to_model = 1.5f;
 			sample_rate_for_change = 100 / static_cast<int>(dist_to_model);
-			amount = 72 / static_cast<int>(dist_to_model);
+			amount = 180 / static_cast<int>(dist_to_model);
 			// 保证采样率合法且不太大
 			if (sample_rate_for_change < 4)
 				sample_rate_for_change = 4;
-			if (sample_rate_for_change > 100)
-				sample_rate_for_change = 100;
+			if (sample_rate_for_change > 60)
+				sample_rate_for_change = 60;
 			if (amount < 4)
 				amount = 4;
-			if (amount > 180)
-				amount = 180;
+			if (amount > 90)
+				amount = 90;
 			ImGui::Text("Sample Rate of Bezier curve = %d", sample_rate_for_change);
 			ImGui::Text("Sample Rate of Scanning = %d", amount);
 		}
