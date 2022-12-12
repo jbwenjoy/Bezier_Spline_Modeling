@@ -58,9 +58,6 @@
     <None Include="shaders\test.vert">
       <Filter>资源文件\shaders</Filter>
     </None>
-    <None Include="shaders\test1.frag">
-      <Filter>资源文件\shaders</Filter>
-    </None>
     <None Include="shaders\midline.vert">
       <Filter>资源文件\shaders</Filter>
     </None>
@@ -73,10 +70,11 @@
     <None Include="shaders\to_mesh.frag">
       <Filter>资源文件\shaders</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="tessellation.tess">
+    <None Include="shaders\test1.frag">
       <Filter>资源文件\shaders</Filter>
-    </Text>
+    </None>
+    <None Include="shaders\tessellation.tess">
+      <Filter>资源文件\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

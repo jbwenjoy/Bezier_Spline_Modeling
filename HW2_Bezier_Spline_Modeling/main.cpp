@@ -8,13 +8,14 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-//#include <assimp/Importer.hpp>
+#include <assimp/Importer.hpp>
 //#include <assimp/scene.h>
 //#include <assimp/postprocess.h>
 //#include <assimp/config.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
 #include "shader.h"
 #include "bezier.h"
 #include "bezier_manager.h"
@@ -50,7 +51,7 @@ bool firstMouse = true;
 
 
 // timing
-float deltaTime = 0.0f;	// time between current frame and last frame
+float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 
 
@@ -64,14 +65,14 @@ static double clickPointY_d = 0;
 
 // Êó±êµã»÷ÊäÈë¶¥µãµÄ×´Ì¬±äÁ¿
 static bool isAddingCurve = false; // ÊÇ·ñÕýÔÚÌí¼ÓÇúÏß£¬Èç¹ûÖÐÍ¾·ÅÆúÌí¼ÓÔòÁ¢¿Ì½«¸ÃÖµÖÃÎªfalse
-static bool vertAdded[4] = { false }; // Èç¹ûÔÚÌí¼ÓÇúÏß£¬Ë÷ÒýÖµ¶ÔÓ¦µÄ¶¥µãÊÇ·ñÒÑÌí¼Ó
+static bool vertAdded[4] = {false}; // Èç¹ûÔÚÌí¼ÓÇúÏß£¬Ë÷ÒýÖµ¶ÔÓ¦µÄ¶¥µãÊÇ·ñÒÑÌí¼Ó
 static bool cancelAddingCurve = false; // Èç¹ûÕýÔÚÌí¼ÓÇúÏß£¬ÊÇ·ñÈ¡ÏûÌí¼Ó£¬ÖÃÎªtrueºóÍË³öÌí¼Ó£¬ÐèÖØÖÃÎªfalse
 static bool vertsEnterComplete = false; // Èç¹ûÎªtrueÔòÍ£Ö¹½»»¥ÊäÈë£¬¿ªÊ¼Ïòcurve_manager´«µÝ¶¥µãÊý¾Ý
 static bool sampleRateEnterComplete = false; // Èç¹ûÎªtrueÔòÍ£Ö¹½»»¥ÊäÈë£¬¿ªÊ¼Ïòcurve_manager´«µÝ²ÉÑùÂÊÊý¾Ý
 static int addingVertIndex = 0; // Èç¹ûÕýÔÚÌí¼Ó¶¥µã£¬ÕýÔÚÌí¼ÓµÚ¼¸¸ö¶¥µã£¬È¡ÖµÎª0£¬1£¬2£¬3
 static bool vertClicked = false; // Èç¹ûÕýÔÚÌí¼Ó¶¥µã£¬Êó±êÊÇ·ñ°´ÏÂ£¬Èô°´ÏÂÔòÍ£Ö¹¼ÇÂ¼Êó±êÎ»ÖÃ
 static bool mouseAlreadyDown = false; // ÓÃÓÚ´¦ÀíÊó±ê°´ÏÂÔÙËÉ¿ªÊ±µÄ±ê¼Ç
-static bool goToNextVert[3] = { false };
+static bool goToNextVert[3] = {false};
 
 
 // ÓÃÒ»¸ömanager×÷Îª¼¯ºÏÀ´¹ÜÀíËùÓÐÇúÏß
@@ -81,17 +82,17 @@ static bezier_manager curves_manager;
 // ÓÃÓÚäÖÈ¾¿ØÖÆ¶¥µãÕý·½ÐÎµÄÁ½¸öÐ¡Èý½ÇÐÎ¶¥µã
 float quad[] = {
 	-1.0f, -1.0f,
-	 1.0f, -1.0f,
-	-1.0f,  1.0f,
-	 1.0f,  1.0f,
-	-1.0f,	1.0f,
-	 1.0f, -1.0f
+	1.0f, -1.0f,
+	-1.0f, 1.0f,
+	1.0f, 1.0f,
+	-1.0f, 1.0f,
+	1.0f, -1.0f
 };
 
 
 // Ðý×ªÖáÁ½¶Ëµã£¬Ïàµ±ÓÚyÖáµÄÎ»ÖÃ
 float midline_point[] = {
-	0.0f,  0.5f,
+	0.0f, 0.5f,
 	0.0f, -0.5f
 };
 
@@ -104,7 +105,6 @@ void processInput(GLFWwindow* window)
 		glfwSetWindowShouldClose(window, true);
 	}
 }
-
 
 
 bool use_mouse_to_click = false;
@@ -160,18 +160,18 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		case GLFW_MOUSE_BUTTON_LEFT:
 			glfwGetCursorPos(window, &clickPointX_d, &clickPointY_d);
 
-			//// ±ê×¼»¯Îª0 - 1
-			//clickPointX = static_cast<float>(- 1 + (clickPointX_d / SCR_WIDTH) * 2);
-			//clickPointY = static_cast<float>(- 1 + (clickPointY_d / SCR_HEIGHT) * 2);
+		//// ±ê×¼»¯Îª0 - 1
+		//clickPointX = static_cast<float>(- 1 + (clickPointX_d / SCR_WIDTH) * 2);
+		//clickPointY = static_cast<float>(- 1 + (clickPointY_d / SCR_HEIGHT) * 2);
 			if (isAddingCurve && sampleRateEnterComplete)
 			{
 				clickPointX = static_cast<float>(clickPointX_d);
 				clickPointY = static_cast<float>(clickPointY_d);
 				LMBRelease_for_verts_input = true;
 			}
-			//std::cout << LMBRelease_for_verts_input << std::endl;
+		//std::cout << LMBRelease_for_verts_input << std::endl;
 
-			//std::cout << clickPointX_d << '\t' << clickPointY_d << std::endl;
+		//std::cout << clickPointX_d << '\t' << clickPointY_d << std::endl;
 			break;
 		case GLFW_MOUSE_BUTTON_MIDDLE:
 			break;
@@ -181,7 +181,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 			return;
 		}
 	}
-	
 }
 
 
@@ -227,7 +226,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 
 // ½«×ø±ê±ê×¼»¯µ½-1.0ÖÁ1.0
-void normalize(float &x, float &y)
+void normalize(float& x, float& y)
 {
 	x = (x - SCR_WIDTH / 2) / (SCR_WIDTH / 2);
 	y = (-y + SCR_HEIGHT / 2) / (SCR_HEIGHT / 2);
@@ -248,7 +247,8 @@ void combine_2_verts(float coord[2], float result[2], float thres = 0.010f) // ²
 	for (int i = 0; i < curves_manager.num_of_curves; ++i)
 	{
 		// Í¨³£¸ü¿ÉÄÜÓë×îºóÒ»¸öµãÏàÁ¬£¬¹ÊÏÈÅÐ¶Ï
-		distance_square_2 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[12], curves_manager.curves->ctrl_verts[13]);
+		distance_square_2 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[12],
+		                                              curves_manager.curves->ctrl_verts[13]);
 		if (distance_square_2 < thres)
 		{
 			result[0] = curves_manager.curves->ctrl_verts[12];
@@ -257,7 +257,8 @@ void combine_2_verts(float coord[2], float result[2], float thres = 0.010f) // ²
 			return;
 		}
 
-		distance_square_1 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[0], curves_manager.curves->ctrl_verts[1]);
+		distance_square_1 = calculate_distance_square(coord[0], coord[1], curves_manager.curves->ctrl_verts[0],
+		                                              curves_manager.curves->ctrl_verts[1]);
 		if (distance_square_1 < thres)
 		{
 			result[0] = curves_manager.curves->ctrl_verts[0];
@@ -309,7 +310,7 @@ void save_curves_to_txt()
 
 
 // ´Ótxt¶ÁÈ¡ÇúÏßÊý¾Ý£¬Õâ¸öº¯Êý»¹Ã»Ð´Íê
-void read_curves_from_txt() 
+void read_curves_from_txt()
 {
 	std::ofstream curveDataFile;
 	curveDataFile.open("CurveDataFile.txt", std::ofstream::app);
@@ -328,6 +329,53 @@ void read_curves_from_txt()
 	}
 }
 
+
+// ½«Ä£ÐÍ±£´æÎªobj¸ñÊ½£¬Ä¬ÈÏÃ»ÓÐÎÆÀí
+void save_as_obj(int num_of_verts, float* all_verts_3d, int num_of_vns, glm::vec3* all_verts_vn, int num_of_surfaces, unsigned int* indices)
+{
+	std::fstream file("modelFile.obj", std::ios::out);
+	std::ofstream modelFile;
+	modelFile.open("modelFile.obj", std::ofstream::app);
+	modelFile << "# Generated by HW2_Bezier_Spline_Modeling\n";
+
+	modelFile << "mtllib modelFile.mtl\n";
+
+	// Ð´Èë¶¥µã
+	for (int i = 0; i < num_of_verts; ++i) // ÒªÇóall_verts_3dÎª4d
+	{
+		modelFile << "\nv ";
+		modelFile << all_verts_3d[4 * i + 0] << " ";
+		modelFile << all_verts_3d[4 * i + 1] << " ";
+		modelFile << all_verts_3d[4 * i + 2];
+	}
+
+	// Ð´Èë¶¥µã·¨Ê¸
+	for (int i = 0; i < num_of_vns; ++i) // ÒªÇóall_verts_vnÎª3d
+	{
+		modelFile << "\nvn ";
+		modelFile << all_verts_vn[i].x << " ";
+		modelFile << all_verts_vn[i].y << " ";
+		modelFile << all_verts_vn[i].z;
+	}
+
+	// Ð´ÈëÃæ£¬ÎÞÎÆÀí
+	for (int i = 0; i < num_of_surfaces; ++i) // Ã¿¸öÃæµÄindices°üº¬3¸öÔªËØ
+	{
+		modelFile << "\nf ";
+		//modelFile << indices[3 * i + 0] << "//" << indices[3 * i + 0] << " ";
+		//modelFile << indices[3 * i + 1] << "//" << indices[3 * i + 1] << " ";
+		//modelFile << indices[3 * i + 2] << "//" << indices[3 * i + 2];
+		modelFile << indices[3 * i + 0] << "//" << 3 * i + 0 << " ";
+		modelFile << indices[3 * i + 1] << "//" << 3 * i + 1 << " ";
+		modelFile << indices[3 * i + 2] << "//" << 3 * i + 2;
+	}
+	modelFile << '\n';
+
+	modelFile << "\ns off";
+
+	file.close();
+	modelFile.close();
+}
 
 
 // ÓÃÓÚ²âÊÔÁ½¸öclassµÄmainº¯Êý
@@ -510,7 +558,7 @@ void modeling_addCurve()
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
-		return;// -1;
+		return; // -1;
 	}
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
@@ -519,7 +567,7 @@ void modeling_addCurve()
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
 		std::cout << "Failed to initialize GLAD" << std::endl;
-		return;// -1;
+		return; // -1;
 	}
 
 
@@ -566,11 +614,7 @@ void modeling_addCurve()
 	glGenVertexArrays(1, &midlineVAO);
 	glGenBuffers(1, &midlineVBO);
 
-
-	//Shader shader1("E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.vert", "E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.frag");
-	//Shader shader2("E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/point.vert", "E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.frag");
-	//Shader temp_shader("E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/point.vert", "E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.frag");
-	//Shader midline_shader("E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/midline.vert", "E:/OpenGL_projects/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/HW2_Bezier_Spline_Modeling/shaders/test.frag");
+	// Ïà¶ÔÂ·¾¶
 	Shader shader1("./shaders/test.vert", "./shaders/test.frag");
 	Shader shader2("./shaders/point.vert", "./shaders/test.frag");
 	Shader temp_shader("./shaders/point.vert", "./shaders/test.frag");
@@ -580,7 +624,8 @@ void modeling_addCurve()
 	// ÉèÖÃDear ImGuiÉÏÏÂÎÄ
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
 
 	// ÉèÖÃDear ImGui·ç¸ñ
 	ImGui::StyleColorsDark();
@@ -594,7 +639,7 @@ void modeling_addCurve()
 	// ÎªÊ²Ã´ÒªÓÐÕâÒ»²¿·ÖÊÇÒòÎªÔÚäÖÈ¾Ñ­»·ÖÐ²»¿ÉÄÜÔÙ¿ªÒ»¸öµÈ´ýÊó±êµã»÷ÊäÈë¶¥µã×ø±êµÄÑ­»·
 
 	bool show_control_panel = true;
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+	auto clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
 	// µÚ1½×¶Î£ºÍ¨¹ýÊó±êµã»÷ÊäÈë¶¥µã
 	isAddingCurve = false; // ÊÇ·ñÕýÔÚÌí¼ÓÇúÏß£¬Èç¹ûÖÐÍ¾·ÅÆúÌí¼ÓÔòÁ¢¿Ì½«¸ÃÖµÖÃÎªfalse
@@ -609,6 +654,7 @@ void modeling_addCurve()
 	for (int i = 0; i < 3; ++i)
 		goToNextVert[i] = false;
 	bool start_following_last_curve = false; // Ñ¯ÎÊÊÇ·ñÐèÒªÈÃÐÂ½¨µÄÇúÏßÓëÇ°Ò»ÌõÇúÏßµÄ×îºóÒ»¸ö¿ØÖÆ¶¥µãÏàÁ¬
+	bool c1_continuity = false;
 
 	// µÚ2½×¶Î£ºÍê³ÉÇúÏßÊäÈë£¬ÒªÉú³ÉÐý×ªÉ¨ÃèµÄÄ£ÐÍ
 	bool complete_adding_curve = false; // Ñ¯ÎÊÊÇ·ñÍê³ÉÇúÏßÌí¼Ó£¬Íê³Éºó½«¿ªÊ¼Éú³ÉÐý×ªÉ¨ÃèµÄÄ£ÐÍ
@@ -688,16 +734,14 @@ void modeling_addCurve()
 		// Èç¹ûÃ»ÓÐÍË³ö£¬Ôò¿ªÊ¼Ìí¼ÓÇúÏß
 		if (isAddingCurve)
 		{
-
 			if (sampleRateEnterComplete)
 			{
-
 				ImGui::Text("Sample Rate = %d", sample_rate);
 
 				glBindVertexArray(temp_ctrl_point_VAO);
 				glBindBuffer(GL_ARRAY_BUFFER, temp_ctrl_point_VBO);
 				glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float) * 2, quad, GL_STATIC_DRAW);
-				glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+				glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), static_cast<void*>(nullptr));
 				glEnableVertexAttribArray(0);
 				glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -711,7 +755,8 @@ void modeling_addCurve()
 						{
 							for (int i = 0; i < 4; ++i)
 							{
-								ctrl_verts[i] = curves_manager.curves[curves_manager.num_of_curves - 1].ctrl_verts[12 + i];
+								ctrl_verts[i] = curves_manager.curves[curves_manager.num_of_curves - 1].ctrl_verts[12 +
+									i];
 							}
 
 							LMBRelease_for_verts_input = false;
@@ -736,7 +781,6 @@ void modeling_addCurve()
 							}
 							//std::cout << "aaaaa\n";
 						}
-
 					}
 					if (addingVertIndex > 0)
 					{
@@ -744,20 +788,37 @@ void modeling_addCurve()
 					}
 
 					// ÊäÈëµÚ2¸ö¶¥µã
-					if (addingVertIndex == 1 && vertAdded[1] == false && goToNextVert[0] /* && LMBRelease_for_verts_input == false*/)
+					if (addingVertIndex == 1 && vertAdded[1] == false && goToNextVert[0]
+						/* && LMBRelease_for_verts_input == false*/)
 					{
-						if (LMBRelease_for_verts_input)
+						// Ñ¯ÎÊÊÇ·ñÐèÒªÓëÇ°Ò»ÌõÇúÏßC1Á¬Ðø
+						if (c1_continuity && curves_manager.num_of_curves > 0)
 						{
-							ctrl_verts[4] = clickPointX;
-							ctrl_verts[5] = clickPointY;
-							normalize(ctrl_verts[4], ctrl_verts[5]);
-							ctrl_verts[6] = 0.0f;
-							ctrl_verts[7] = 1.0f;
+							for (int i = 4; i < 8; ++i)
+							{
+								ctrl_verts[i] = 2 * curves_manager.curves[curves_manager.num_of_curves - 1].ctrl_verts[i + 8] - curves_manager.curves[curves_manager.num_of_curves - 1].ctrl_verts[i + 4];
+							}
 
 							LMBRelease_for_verts_input = false;
 							addingVertIndex = 2;
 							vertAdded[1] = true;
 						}
+						if (vertAdded[1] == false)
+						{
+							if (LMBRelease_for_verts_input)
+							{
+								ctrl_verts[4] = clickPointX;
+								ctrl_verts[5] = clickPointY;
+								normalize(ctrl_verts[4], ctrl_verts[5]);
+								ctrl_verts[6] = 0.0f;
+								ctrl_verts[7] = 1.0f;
+
+								LMBRelease_for_verts_input = false;
+								addingVertIndex = 2;
+								vertAdded[1] = true;
+							}
+						}
+						
 					}
 					if (addingVertIndex > 1)
 					{
@@ -765,7 +826,8 @@ void modeling_addCurve()
 					}
 
 					// ÊäÈëµÚ3¸ö¶¥µã
-					if (addingVertIndex == 2 && vertAdded[2] == false && goToNextVert[1] /* && LMBRelease_for_verts_input == false*/)
+					if (addingVertIndex == 2 && vertAdded[2] == false && goToNextVert[1]
+						/* && LMBRelease_for_verts_input == false*/)
 					{
 						if (LMBRelease_for_verts_input)
 						{
@@ -786,7 +848,8 @@ void modeling_addCurve()
 					}
 
 					// ÊäÈëµÚ4¸ö¶¥µã
-					if (addingVertIndex == 3 && vertAdded[3] == false && goToNextVert[2] /* && LMBRelease_for_verts_input == false*/)
+					if (addingVertIndex == 3 && vertAdded[3] == false && goToNextVert[2]
+						/* && LMBRelease_for_verts_input == false*/)
 					{
 						if (LMBRelease_for_verts_input)
 						{
@@ -818,8 +881,13 @@ void modeling_addCurve()
 			{
 				ImGui::InputInt("Sample Rate", &sample_rate);
 				if (curves_manager.num_of_curves > 0)
+				{
 					ImGui::Checkbox("Follow the Latter Curve?", &start_following_last_curve);
-
+					if (start_following_last_curve)
+					{
+						ImGui::Checkbox("C1 Continuity?", &c1_continuity);
+					}
+				}
 				sampleRateEnterComplete = ImGui::Button("Comfirm");
 			}
 
@@ -864,7 +932,7 @@ void modeling_addCurve()
 			glBindVertexArray(midlineVAO);
 			glBindBuffer(GL_ARRAY_BUFFER, midlineVBO);
 			glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(float), midline_point, GL_STATIC_DRAW);
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), static_cast<void*>(nullptr));
 			glEnableVertexAttribArray(0);
 
 			glDrawArrays(GL_LINE_STRIP, 0, 2);
@@ -900,12 +968,12 @@ void modeling_addCurve()
 			glBindVertexArray(temp_ctrl_point_VAO);
 			glBindBuffer(GL_ARRAY_BUFFER, temp_ctrl_point_VBO);
 			glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(float), quad, GL_STATIC_DRAW);
-			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), static_cast<void*>(nullptr));
 			glEnableVertexAttribArray(0);
 
 			glBindBuffer(GL_ARRAY_BUFFER, temp_instanceVBO);
 			glBufferData(GL_ARRAY_BUFFER, 4 * addingVertIndex * sizeof(float), ctrl_verts, GL_STATIC_DRAW);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void*>(nullptr));
 			glEnableVertexAttribArray(1);
 			glVertexAttribDivisor(1, 1);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -918,10 +986,12 @@ void modeling_addCurve()
 		// ÏÔÊ¾Êó±êÐÅÏ¢
 		//ImGui::Text("Mouse wheel: %.1f", io.MouseWheel);
 		ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
-		ImGui::Text("Mouse pos normalized: (%g, %g)", (io.MousePos.x - SCR_WIDTH / 2) / (SCR_WIDTH / 2), (-io.MousePos.y + SCR_HEIGHT / 2) / (SCR_HEIGHT / 2));
+		ImGui::Text("Mouse pos normalized: (%g, %g)", (io.MousePos.x - SCR_WIDTH / 2) / (SCR_WIDTH / 2),
+		            (-io.MousePos.y + SCR_HEIGHT / 2) / (SCR_HEIGHT / 2));
 		//static float f0 = 0.001f;
 		//ImGui::InputFloat("input float", &f0, 0.01f, 1.0f, "%.3f");
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
+		            ImGui::GetIO().Framerate);
 		ImGui::Text("Mouse down:");
 		for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
 		{
@@ -951,7 +1021,6 @@ void modeling_addCurve()
 }
 
 
-
 void modeling_rotate_scan()
 {
 	//³õÊ¼»¯
@@ -968,7 +1037,7 @@ void modeling_rotate_scan()
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
-		return;// -1;
+		return; // -1;
 	}
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
@@ -983,9 +1052,9 @@ void modeling_rotate_scan()
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
 		std::cout << "Failed to initialize GLAD" << std::endl;
-		return;// -1;
+		return; // -1;
 	}
-	
+
 	// ´ò¿ªÉî¶È²âÊÔ
 	glEnable(GL_DEPTH_TEST);
 
@@ -997,20 +1066,22 @@ void modeling_rotate_scan()
 	float delta_degree = 360 / static_cast<float>(amount); // ¾­Ïß¼ä¸ôµÄ½Ç¶È
 	std::cout << "delta_degree = " << delta_degree << '\n';
 
-	bezier_manager* rotate_curves = new bezier_manager[amount]; // ´æ´¢Ðý×ª±ä»»ºóµÄÇúÏß
-	glm::mat4* trans_mats = new glm::mat4[amount]; // ´æ´¢ÈÆyÖáÐý×ª²»Í¬½Ç¶ÈµÄ¾ØÕó
-	unsigned int* transformLoc = new unsigned int[amount]; // ´æ´¢uniformµÄÎ»ÖÃ
+	auto rotate_curves = new bezier_manager[amount]; // ´æ´¢Ðý×ª±ä»»ºóµÄÇúÏß
+	auto trans_mats = new glm::mat4[amount]; // ´æ´¢ÈÆyÖáÐý×ª²»Í¬½Ç¶ÈµÄ¾ØÕó
+	auto transformLoc = new unsigned int[amount]; // ´æ´¢uniformµÄÎ»ÖÃ
 
 	for (int i = 0; i < amount; ++i)
 	{
-		trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree), glm::vec3(0.0, 1.0, 0.0));
+		trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree),
+		                       glm::vec3(0.0, 1.0, 0.0));
 		transformLoc[i] = glGetUniformLocation(rotate_shader.ID, "transform");
 	}
 
-	
+
 	// 1¸öcurve_managerÖÐµÄ×Üdisp_vertÊý
 	int total_sample_verts_1_manager = 0;
-	for (int i = 0; i < curves_manager.num_of_curves; ++i) // ËùÓÐ²ÉÑùµãµÄÊýÁ¿£¬×¢Òâ¼´Ê¹ÔÚÌí¼ÓÇúÏßÊ±¹´Ñ¡ÁË¡°´ÓÇ°Ò»ÌõÇúÏßµÄ×îºóÒ»¸öµã¿ªÊ¼Ìí¼ÓÏÂÒ»ÌõÇúÏß¡±£¬ÈÔÈ»»á½«Õâ¸ö¹²ÓÃµã±£´æÁ½´Î
+	for (int i = 0; i < curves_manager.num_of_curves; ++i)
+	// ËùÓÐ²ÉÑùµãµÄÊýÁ¿£¬×¢Òâ¼´Ê¹ÔÚÌí¼ÓÇúÏßÊ±¹´Ñ¡ÁË¡°´ÓÇ°Ò»ÌõÇúÏßµÄ×îºóÒ»¸öµã¿ªÊ¼Ìí¼ÓÏÂÒ»ÌõÇúÏß¡±£¬ÈÔÈ»»á½«Õâ¸ö¹²ÓÃµã±£´æÁ½´Î
 	{
 		total_sample_verts_1_manager += (curves_manager.curves[i].sample_rate + 1);
 	} // ×¢Òâtotal_sample_verts_1_manager²»³Ë4
@@ -1018,7 +1089,7 @@ void modeling_rotate_scan()
 	// ×¢Òâ×îºóÒ»Ìõ¾­ÏßµÄµÈÐ§²ÉÑùÂÊÆäÊµÊÇtotal_sample_verts_1_manager - 1
 
 	// ÕûºÏ1¸öcurve_managerÖÐµÄËùÓÐdisp_verts
-	float* all_disp_verts_in_1_manager = new float[4 * total_sample_verts_1_manager];
+	auto all_disp_verts_in_1_manager = new float[4 * total_sample_verts_1_manager];
 	int arraylength_of_disp_verts_in_1_manager = 0; // Ïàµ±ÓÚÒ»¸ö¼ÆÊýÆ÷£¬ÎªÑ­»·¿½±´Êý¾ÝÌá¹©·½±ã£¬×îÖÕµÄÖµÎªÊý×éµÄ³¤¶È
 	for (int i = 0; i < curves_manager.num_of_curves; ++i)
 	{
@@ -1026,7 +1097,8 @@ void modeling_rotate_scan()
 		{
 			for (int k = 0; k < 4; ++k)
 			{
-				all_disp_verts_in_1_manager[arraylength_of_disp_verts_in_1_manager] = curves_manager.curves[i].disp_verts[4 * j + k];
+				all_disp_verts_in_1_manager[arraylength_of_disp_verts_in_1_manager] = curves_manager.curves[i].
+					disp_verts[4 * j + k];
 				arraylength_of_disp_verts_in_1_manager += 1;
 			}
 		}
@@ -1042,8 +1114,9 @@ void modeling_rotate_scan()
 
 	glBindVertexArray(one_curve_VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, one_curve_VBO);
-	glBufferData(GL_ARRAY_BUFFER, (4 * total_sample_verts_1_manager) * sizeof(float), &all_disp_verts_in_1_manager[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, (4 * total_sample_verts_1_manager) * sizeof(float), &all_disp_verts_in_1_manager[0],
+	             GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void*>(nullptr));
 	glEnableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -1053,7 +1126,7 @@ void modeling_rotate_scan()
 
 	// ½«glm::mat4²ð³É4¸övec4´«Èë
 	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)0);
+	glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), static_cast<void*>(nullptr));
 	glEnableVertexAttribArray(4);
 	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(glm::vec4), (void*)(sizeof(glm::vec4)));
 	glEnableVertexAttribArray(5);
@@ -1069,7 +1142,9 @@ void modeling_rotate_scan()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	std::cout << "amount = " << amount << "\narraylength_of_disp_verts_in_1_manager = " << arraylength_of_disp_verts_in_1_manager << "\ntotal_sample_verts_1_manager = " << total_sample_verts_1_manager << std::endl;
+	std::cout << "amount = " << amount << "\narraylength_of_disp_verts_in_1_manager = " <<
+		arraylength_of_disp_verts_in_1_manager << "\ntotal_sample_verts_1_manager = " << total_sample_verts_1_manager <<
+		std::endl;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -1083,18 +1158,20 @@ void modeling_rotate_scan()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// configure transformation matrices
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+		                                        static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f,
+		                                        1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 
 		int projectionLoc = glGetUniformLocation(rotate_shader.ID, "projection");
 		int viewLoc = glGetUniformLocation(rotate_shader.ID, "view");
-		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, value_ptr(projection));
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, value_ptr(view));
 
 		rotate_shader.use();
 		rotate_shader.setVec3("color", 1.0f, 1.0f, 1.0f);
 		rotate_shader.setFloat("scale", 1.0f);
-		
+
 		glBindVertexArray(one_curve_VAO);
 		glDrawArraysInstanced(GL_LINE_STRIP, 0, total_sample_verts_1_manager, amount);
 
@@ -1113,7 +1190,6 @@ void modeling_rotate_scan()
 }
 
 
-
 void model_convert_to_mesh()
 {
 	//³õÊ¼»¯
@@ -1130,7 +1206,7 @@ void model_convert_to_mesh()
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
-		return;// -1;
+		return; // -1;
 	}
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
@@ -1145,7 +1221,7 @@ void model_convert_to_mesh()
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
 		std::cout << "Failed to initialize GLAD" << std::endl;
-		return;// -1;
+		return; // -1;
 	}
 
 	// ´ò¿ªÉî¶È²âÊÔ
@@ -1158,20 +1234,21 @@ void model_convert_to_mesh()
 	int amount = 36; // ×Ü¹²ÒªÓÐ¶àÉÙ¸öcurve_manager£¨¼´¾­Ïß£©£¬»áÓ°Ïìdelta_degree
 	float delta_degree = 360 / static_cast<float>(amount); // ¼ä¸ôµÄ½Ç¶È
 	std::cout << "delta_degree = " << delta_degree << '\n';
-	bezier_manager* rotate_curves = new bezier_manager[amount];
+	auto rotate_curves = new bezier_manager[amount];
 
-	glm::mat4* trans_mats = new glm::mat4[amount];
+	auto trans_mats = new glm::mat4[amount];
 	//unsigned int* transformLoc = new unsigned int[amount];
 
 	for (int i = 0; i < amount; ++i) // ¼ä¸ô10¡ã
 	{
 		trans_mats[i] = glm::mat4(1.0f);
-		trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree), glm::vec3(0.0, 1.0, 0.0));
+		trans_mats[i] = rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree),
+		                       glm::vec3(0.0, 1.0, 0.0));
 		//trans_mats[i] = glm::rotate(trans_mats[i], 2 * i * M_PI / amount, glm::vec3(0.0, 1.0, 0.0));
 		//transformLoc[i] = glGetUniformLocation(to_mesh_shader.ID, "transform");
 	}
 
-	
+
 	// 1¸ömanagerÏÂµÄ²ÉÑùµãÊý
 	int total_sample_verts_1_manager = 0;
 	for (int i = 0; i < curves_manager.num_of_curves; ++i) // Ò»¸öcurve_managerÖÐËùÓÐ²ÉÑùµãµÄÊýÁ¿
@@ -1180,7 +1257,7 @@ void model_convert_to_mesh()
 	} // ×¢Òâtotal_sample_verts_1_managerÃ»ÓÐ³Ë4
 
 	// °üº¬1¸öcurve_managerÖÐµÄËùÓÐdisp_verts
-	float* all_disp_verts_in_1_manager = new float[4 * total_sample_verts_1_manager];
+	auto all_disp_verts_in_1_manager = new float[4 * total_sample_verts_1_manager];
 	int arraylength_of_disp_verts_in_1_manager = 0; // ±íÊ¾°üº¬Ò»´Î»æÖÆÖÐËùÓÐ¶¥µãµÄfloatÊý×éµÄ³¤¶È
 	// ½«Êý¾Ý¿½±´µ½all_disp_verts_in_1_managerÖÐ
 	for (int i = 0; i < curves_manager.num_of_curves; ++i)
@@ -1189,7 +1266,8 @@ void model_convert_to_mesh()
 		{
 			for (int k = 0; k < 4; ++k)
 			{
-				all_disp_verts_in_1_manager[arraylength_of_disp_verts_in_1_manager] = curves_manager.curves[i].disp_verts[4 * j + k];
+				all_disp_verts_in_1_manager[arraylength_of_disp_verts_in_1_manager] = curves_manager.curves[i].
+					disp_verts[4 * j + k];
 				arraylength_of_disp_verts_in_1_manager += 1;
 			}
 		}
@@ -1201,7 +1279,7 @@ void model_convert_to_mesh()
 	int total_sample_verts_3d = amount * total_sample_verts_1_manager;
 
 	// ±£´æÈýÎ¬Ä£ÐÍËùÓÐ¶¥µãµÄ´óÊý×é
-	float* all_verts_3d = new float[4 * total_sample_verts_3d];
+	auto all_verts_3d = new float[4 * total_sample_verts_3d];
 	int all_verts_3d_length = 0;
 	// ¶ÔÃ¿¸öÏÔÊ¾µã×ö±ä»»
 	for (int j = 0; j < amount; ++j)
@@ -1221,9 +1299,8 @@ void model_convert_to_mesh()
 			all_verts_3d[all_verts_3d_length++] = result.w;
 		}
 	} // ÖÁ´Ë£¬3dÄ£ÐÍËùÓÐ¶¥µã¾ù±»±£´æÔÚ´óÊý×éall_verts_3dÖÐ£¬all_verts_3d_lengtºÍamount * arraylength_of_disp_verts_in_1_manager¾ùÎªÆä³¤¶È
-	std::cout << "\nall_verts_3d_length = " << all_verts_3d_length << "\ntotal_sample_verts_3d = " << total_sample_verts_3d << std::endl;
-
-
+	std::cout << "\ntotal_sample_verts_3d = " << total_sample_verts_3d;
+	std::cout << "\ntotal number of triangles = " << 2 * amount * (total_sample_verts_1_manager - 1);
 
 	// --------¶¥µãÓëÈý½ÇÃæÆ¬ÍØÆË¹ØÏµ·ÖÎö--------
 	// ÀíÂÛÓ¦µ±ÓÐamount * (total_sample_verts_1_manager - 1)¸öËÄ±ßÐÎ£¬Ã¿¸öËÄ±ßÐÎÓÖ·Ö³ÉÁ½¸öÐ¡Èý½ÇÐÎ
@@ -1247,27 +1324,76 @@ void model_convert_to_mesh()
 	// **×¢Òâ¾ùÃ»ÓÐ³Ë4£¬ÇÒ»¹ÐèÒª¶Ô×Ü¶¥µãÊýÈ¡Óà**
 
 	// ±£´æÈý½ÇÐÎÓë¶¥µãÍØÆË¹ØÏµµÄË÷ÒýÊý×é
-	unsigned int* indices = new unsigned int[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
+	auto indices = new unsigned int[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
 	for (int i = 0; i < 2 * amount * (total_sample_verts_1_manager - 1); ++i)
 	{
-		if (i % 2 == 0)
+		if (i % 2 == 0) // Å¼Êý£¬×¢Òâ´æ´¢Ë³ÐòÒªÓëOBJÎÄ¼þÆ¥Åä
 		{
-			indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2) % total_sample_verts_3d;
-			indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
-			indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
+			indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 *
+				(total_sample_verts_1_manager - 1)) / 2) % total_sample_verts_3d;
+			indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 *
+				(total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
+			indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 *
+				(total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
 		}
-		if (i % 2 == 1)
+		if (i % 2 == 1) // ÆæÊý
 		{
-			indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
-			indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
-			indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager + 1) % total_sample_verts_3d;
+			indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 *
+				(total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
+			indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 *
+				(total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
+			indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 *
+				(total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager + 1) % total_sample_verts_3d;
 		}
 	}
 
 
+	// ¼ÆËã¶¥µã·¨Ê¸Á¿
+	// ¶¨µã·¨Ê¸Á¿µÄË÷ÒýÖµ£¬Îª·½±ã£¬Ö±½ÓÉèÖÃÎªÓëÈý½ÇÐÎ¶¥µãË÷ÒýÊý×éÒ»Ò»¶ÔÓ¦
+	auto vn_indices = new unsigned int[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
 
+	// ±£´æ¶¥µã·¨Ê¸Á¿£¬¶¥µã·¨Ê¸Á¿µÄ×Ü¸öÊýÓ¦ÎªÈý½ÇÃæÆ¬ÊýµÄÈý±¶£¬Ã¿¸ö·¨Ê¸Á¿°üº¬3¸öfloat·ÖÁ¿
+	auto vn = new glm::vec3[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
 
+	// ¶¨Òå¸¨ÖúÊý×é£¬ÒÔglm::vec3ÐÎÊ½±£´æ¶¥µã×ø±ê£¬Ë³Ðò²»±ä£¬¶ªÆúw×ø±ê
+	auto all_verts_3d_vec3 = new glm::vec3[total_sample_verts_3d];
+	for (int i = 0; i < total_sample_verts_3d; ++i)
+	{
+		all_verts_3d_vec3[i].x = all_verts_3d[4 * i + 0];
+		all_verts_3d_vec3[i].y = all_verts_3d[4 * i + 1];
+		all_verts_3d_vec3[i].z = all_verts_3d[4 * i + 2];
+	}
 
+	// ¶¨ÒåÈýÎ¬ÁãÊ¸Á¿
+	glm::vec3 zeroVec3 = glm::vec3(0.0f, 0.0f, 0.0f);
+	// ¼ÆËã¶¥µã·¨Ê¸Á¿
+	for (int i = 0; i < 2 * amount * (total_sample_verts_1_manager - 1); ++i)
+	{
+		glm::vec3 delta_1 = all_verts_3d_vec3[indices[3 * i + 1]] - all_verts_3d_vec3[indices[3 * i + 0]];
+		glm::vec3 delta_2 = all_verts_3d_vec3[indices[3 * i + 2]] - all_verts_3d_vec3[indices[3 * i + 1]];
+		glm::vec3 cross = glm::cross(delta_1, delta_2);
+		if (cross.x < 1e-6 && cross.y < 1e-6 && cross.z < 1e-6)
+		{
+			// ´æÔÚµãÖØºÏ
+			vn[3 * i + 0] = glm::vec3(1.0f, 0.0f, 0.0f);
+			vn[3 * i + 1] = glm::vec3(1.0f, 0.0f, 0.0f);
+			vn[3 * i + 2] = glm::vec3(1.0f, 0.0f, 0.0f);
+		}
+		else
+		{
+			// ²æ³Ë¡¢±ê×¼»¯£¬µÃµ½Èý½ÇÃæ·¨ÏòÁ¿£¬ÓÉÓÚ´Ë´¦Ï£ÍûÌåÏÖÄ£ÐÍµÄÀâ½Ç£¬Ã¿¸ö¶¥µãÔÚÃ¿¸öÈý½ÇÃæÄÚµÄ·¨ÏòÁ¿ÓëÈý½ÇÃæÆ¬µÄÏàÍ¬
+			vn[3 * i + 0] = glm::normalize(cross);
+			vn[3 * i + 1] = glm::normalize(cross);
+			vn[3 * i + 2] = glm::normalize(cross);
+		}
+	}
+
+	// ²»ÔÙÐèÒª¸¨ÖúÊý×é
+	delete[] all_verts_3d_vec3;
+
+	std::cout << "\ntotal number of vn = " << 3 * 2 * amount * (total_sample_verts_1_manager - 1) << std::endl;
+
+	// ¶¨ÒåVAO¡¢VBO¡¢EBO
 	unsigned int VAO, VBO, EBO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -1278,22 +1404,26 @@ void model_convert_to_mesh()
 	glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(&all_verts_3d[0]), all_verts_3d, GL_DYNAMIC_DRAW);
 	std::cout << "all_verts_3d:\n" << "size = " << sizeof(all_verts_3d) << std::endl;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(&indices[0]), indices, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(&indices[0]),
+	             indices, GL_DYNAMIC_DRAW);
 	std::cout << "indices:\n" << "size = " << sizeof(indices) << std::endl;
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void*>(nullptr));
 	glEnableVertexAttribArray(0);
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	std::cout << "\namount = " << amount << "\narraylength_of_disp_verts_in_1_manager = " << arraylength_of_disp_verts_in_1_manager << "\ntotal_sample_verts_1_manager = " << total_sample_verts_1_manager << std::endl;
+	std::cout << "\namount = " << amount << "\narraylength_of_disp_verts_in_1_manager = " <<
+		arraylength_of_disp_verts_in_1_manager << "\ntotal_sample_verts_1_manager = " << total_sample_verts_1_manager <<
+		std::endl;
 
 
 	// ÅäÖÃDear ImGui
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGuiIO& io = ImGui::GetIO();
+	(void)io;
 	// ÉèÖÃ·ç¸ñ
 	ImGui::StyleColorsDark();
 	// ÉèÖÃÆ½Ì¨
@@ -1313,7 +1443,7 @@ void model_convert_to_mesh()
 		if (use_mouse_to_click == true)
 		{
 			// È¡ÏûÊó±ê»Øµ÷º¯Êý
-			glfwSetCursorPosCallback(window, NULL);
+			glfwSetCursorPosCallback(window, nullptr);
 			// È¡Ïû²¶×½Êó±ê
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
@@ -1334,21 +1464,25 @@ void model_convert_to_mesh()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// ÊÓ¾õ±ä»»¾ØÕó
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+		                                        static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f,
+		                                        1000.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 		int projectionLoc = glGetUniformLocation(to_mesh_shader.ID, "projection");
 		int viewLoc = glGetUniformLocation(to_mesh_shader.ID, "view");
-		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, value_ptr(projection));
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, value_ptr(view));
 
 		// Ïà»úµ½Ä£ÐÍµÄ¾àÀë
-		float dist_to_model = sqrt(camera.Position.x * camera.Position.x + camera.Position.y * camera.Position.y + camera.Position.z * camera.Position.z);
+		float dist_to_model = sqrt(
+			camera.Position.x * camera.Position.x + camera.Position.y * camera.Position.y + camera.Position.z * camera.
+			Position.z);
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		
+
 		// ImGui ´°¿ÚÉèÖÃ
 		ImGui::SetWindowPos(ImVec2(2, 2));
 		ImGui::SetWindowSize(ImVec2(600, 400));
@@ -1404,7 +1538,6 @@ void model_convert_to_mesh()
 			ImGui::Text("Sample Rate of Scanning = %d", amount);
 		}
 
-		
 
 		// ·¢Éú¸Ä±ä
 		if (old_sample_rate != sample_rate_for_change || old_amount != amount)
@@ -1429,29 +1562,30 @@ void model_convert_to_mesh()
 
 			delete[] rotate_curves;
 			rotate_curves = new bezier_manager[amount];
-		
+
 			delete[] trans_mats;
 			trans_mats = new glm::mat4[amount];
-		
+
 			//delete[] transformLoc;
 			//transformLoc = new unsigned int[amount];
-		
+
 			for (int i = 0; i < amount; ++i) // ¼ä¸ô10¡ã
 			{
 				trans_mats[i] = glm::mat4(1.0f);
-				trans_mats[i] = glm::rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree), glm::vec3(0.0, 1.0, 0.0));
+				trans_mats[i] = rotate(trans_mats[i], glm::radians(static_cast<float>(i) * delta_degree),
+				                       glm::vec3(0.0, 1.0, 0.0));
 				//trans_mats[i] = glm::rotate(trans_mats[i], 2 * i * M_PI / amount, glm::vec3(0.0, 1.0, 0.0));
 				//transformLoc[i] = glGetUniformLocation(to_mesh_shader.ID, "transform");
 			}
-		
-		
+
+
 			// 1¸ömanagerÏÂµÄ²ÉÑùµãÊý
 			total_sample_verts_1_manager = 0;
 			for (int i = 0; i < curves_manager.num_of_curves; ++i) // Ò»¸öcurve_managerÖÐËùÓÐ²ÉÑùµãµÄÊýÁ¿
 			{
 				total_sample_verts_1_manager += (curves_manager.curves[i].sample_rate + 1);
 			} // ×¢Òâtotal_sample_verts_1_managerÃ»ÓÐ³Ë4
-		
+
 			// °üº¬1¸öcurve_managerÖÐµÄËùÓÐdisp_verts
 			delete[] all_disp_verts_in_1_manager;
 			all_disp_verts_in_1_manager = new float[4 * total_sample_verts_1_manager];
@@ -1464,17 +1598,18 @@ void model_convert_to_mesh()
 				{
 					for (int k = 0; k < 4; ++k)
 					{
-						all_disp_verts_in_1_manager[arraylength_of_disp_verts_in_1_manager] = curves_manager.curves[i].disp_verts[4 * j + k];
+						all_disp_verts_in_1_manager[arraylength_of_disp_verts_in_1_manager] = curves_manager.curves[i].
+							disp_verts[4 * j + k];
 						arraylength_of_disp_verts_in_1_manager += 1;
 					}
 				}
 			} // ÖÁ´Ë£¬curve_managerÖÐµÄËùÓÐdisp_verts¶¼ÒÑ¿½±´µ½Êý×éall_disp_verts_in_1_managerÖÐ£¬ÇÒÊý×é³¤¶ÈÎªarraylength_of_disp_verts_in_1_manager
 			//std::cout << arraylength_of_disp_verts_in_1_manager << '\t' << total_sample_verts_1_manager;
-		
-		
+
+
 			// 3dÄ£ÐÍ×Ü¶¥µãÊý
 			total_sample_verts_3d = amount * total_sample_verts_1_manager;
-		
+
 			// ±£´æÈýÎ¬Ä£ÐÍËùÓÐ¶¥µãµÄ´óÊý×é
 			delete[] all_verts_3d;
 			all_verts_3d = new float[4 * total_sample_verts_3d];
@@ -1489,7 +1624,7 @@ void model_convert_to_mesh()
 					float z = all_disp_verts_in_1_manager[4 * i + 2];
 					float w = all_disp_verts_in_1_manager[4 * i + 3];
 					glm::vec4 coord(x, y, z, w);
-		
+
 					glm::vec4 result = trans_mats[j] * coord;
 					all_verts_3d[all_verts_3d_length++] = result.x;
 					all_verts_3d[all_verts_3d_length++] = result.y;
@@ -1497,27 +1632,78 @@ void model_convert_to_mesh()
 					all_verts_3d[all_verts_3d_length++] = result.w;
 				}
 			} // ÖÁ´Ë£¬3dÄ£ÐÍËùÓÐ¶¥µã¾ù±»±£´æÔÚ´óÊý×éall_verts_3dÖÐ£¬all_verts_3d_lengtºÍamount * arraylength_of_disp_verts_in_1_manager¾ùÎªÆä³¤¶È
-			std::cout << "\nall_verts_3d_length = " << all_verts_3d_length << "\ntotal_sample_verts_3d = " << total_sample_verts_3d << std::endl;
-		
-		
+			std::cout << "\ntotal number of verts = " << total_sample_verts_3d;
+			std::cout << "\ntotal number of triangles = " << 2 * amount * (total_sample_verts_1_manager - 1);
+
 			// ±£´æÈý½ÇÐÎÓë¶¥µãÍØÆË¹ØÏµµÄË÷ÒýÊý×é
 			delete[] indices;
 			indices = new unsigned int[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
 			for (int i = 0; i < 2 * amount * (total_sample_verts_1_manager - 1); ++i)
 			{
-				if (i % 2 == 0)
+				if (i % 2 == 0) // Í¬ÑùÐèÒª×¢ÒâË³ÐòÒªÂú×ãOBJÎÄ¼þµÄÒªÇó
 				{
-					indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2) % total_sample_verts_3d;
-					indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
-					indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
+					indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager +
+						i % (2 * (total_sample_verts_1_manager - 1)) / 2) % total_sample_verts_3d;
+					indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager +
+						i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
+					indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager +
+							i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) %
+						total_sample_verts_3d;
 				}
 				if (i % 2 == 1)
 				{
-					indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
-					indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) % total_sample_verts_3d;
-					indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager + i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager + 1) % total_sample_verts_3d;
+					indices[i * 3 + 0] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager +
+						i % (2 * (total_sample_verts_1_manager - 1)) / 2 + 1) % total_sample_verts_3d;
+					indices[i * 3 + 1] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager +
+							i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager) %
+						total_sample_verts_3d;
+					indices[i * 3 + 2] = (i / (2 * (total_sample_verts_1_manager - 1)) * total_sample_verts_1_manager +
+							i % (2 * (total_sample_verts_1_manager - 1)) / 2 + total_sample_verts_1_manager + 1) %
+						total_sample_verts_3d;
 				}
 			}
+
+
+			// ¸üÐÂ¶¥µã·¨Ê¸Á¿
+			delete[] vn_indices;
+			vn_indices = new unsigned int[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
+			delete[] vn;
+			vn = new glm::vec3[3 * 2 * amount * (total_sample_verts_1_manager - 1)];
+			//delete[] all_verts_3d_vec3; // ÒòÎªÖ®Ç°ËãÍê¾ÍÖ±½ÓdeleteÁË£¬²»Ó¦ÖØ¸´delete
+			all_verts_3d_vec3 = new glm::vec3[total_sample_verts_3d];
+			for (int i = 0; i < total_sample_verts_3d; ++i)
+			{
+				all_verts_3d_vec3[i].x = all_verts_3d[4 * i + 0];
+				all_verts_3d_vec3[i].y = all_verts_3d[4 * i + 1];
+				all_verts_3d_vec3[i].z = all_verts_3d[4 * i + 2];
+			}
+			for (int i = 0; i < 2 * amount * (total_sample_verts_1_manager - 1); ++i)
+			{
+				glm::vec3 delta_1 = all_verts_3d_vec3[indices[3 * i + 1]] - all_verts_3d_vec3[indices[3 * i + 0]];
+				glm::vec3 delta_2 = all_verts_3d_vec3[indices[3 * i + 2]] - all_verts_3d_vec3[indices[3 * i + 1]];
+
+				glm::vec3 cross = glm::cross(delta_1, delta_2);
+
+				if (cross.x < 1e-6 && cross.y < 1e-6 && cross.z < 1e-6)
+				{
+					// ´æÔÚµãÖØºÏ
+					vn[3 * i + 0] = glm::vec3(1.0f, 0.0f, 0.0f);
+					vn[3 * i + 1] = glm::vec3(1.0f, 0.0f, 0.0f);
+					vn[3 * i + 2] = glm::vec3(1.0f, 0.0f, 0.0f);
+				}
+				else
+				{
+					// ²æ³Ë¡¢±ê×¼»¯£¬µÃµ½Èý½ÇÃæ·¨ÏòÁ¿£¬ÓÉÓÚ´Ë´¦Ï£ÍûÌåÏÖÄ£ÐÍµÄÀâ½Ç£¬Ã¿¸ö¶¥µãÔÚÃ¿¸öÈý½ÇÃæÄÚµÄ·¨ÏòÁ¿ÓëÈý½ÇÃæÆ¬µÄÏàÍ¬
+					vn[3 * i + 0] = glm::normalize(cross);
+					vn[3 * i + 1] = glm::normalize(cross);
+					vn[3 * i + 2] = glm::normalize(cross);
+				}
+			}
+			delete[] all_verts_3d_vec3;
+			std::cout << "\ntotal number of vn = " << 3 * 2 * amount * (total_sample_verts_1_manager - 1) << std::endl;
+
+
+			// ÖØÖÃ×´Ì¬
 			changed = false;
 		}
 
@@ -1527,9 +1713,11 @@ void model_convert_to_mesh()
 		glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(float), all_verts_3d, GL_DYNAMIC_DRAW);
 		//std::cout << "all_verts_3d:\n" << "size = " << sizeof(all_verts_3d) << std::endl;
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
+		glBufferData(
+			GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(unsigned int),
+			indices, GL_DYNAMIC_DRAW);
 		//std::cout << "indices:\n" << "size = " << sizeof(indices) << std::endl;
-		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void*>(nullptr));
 		glEnableVertexAttribArray(0);
 		glBindVertexArray(0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1543,7 +1731,7 @@ void model_convert_to_mesh()
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		//glDrawArrays(GL_TRIANGLES, 0, 6);
-		glDrawElements(GL_TRIANGLES, 3 * 2 * amount * (total_sample_verts_1_manager - 1), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 3 * 2 * amount * (total_sample_verts_1_manager - 1), GL_UNSIGNED_INT, nullptr);
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1582,7 +1770,9 @@ void model_convert_to_mesh()
 		VertsData3dOutput << all_verts_3d[4 * i + 3] << '\n';
 	}
 
-	
+	// Ð´ÈëobjÎÄ¼þ
+	save_as_obj(total_sample_verts_3d, all_verts_3d, 3 * 2 * amount * (total_sample_verts_1_manager - 1), vn, 2 * amount * (total_sample_verts_1_manager - 1), indices);
+
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
@@ -1593,11 +1783,76 @@ void model_convert_to_mesh()
 	delete[] rotate_curves;
 	delete[] all_verts_3d;
 	delete[] indices;
+	delete[] vn_indices;
+	delete[] vn;
 	glfwTerminate();
 }
 
 
-
+//bool readOBJ()
+//{
+//	std::vector<int> vertexIndices, uvIndices, normalIndices;
+//	std::vector<float> temp_vertices;
+//	std::vector<float> temp_uvs;
+//	std::vector<float> temp_normals;
+//
+//	FILE* file = fopen("modelFile.obj", "r");
+//	if (file == NULL) {
+//		printf("Impossible to open the file !n");
+//		return false;
+//	}
+//
+//	while (true)
+//	{
+//		char lineHeader[128];
+//		// read the first word of the line
+//		int res = fscanf(file, "%s", lineHeader);
+//		if (res == EOF)
+//			break; // EOF = End Of File. Quit the loop.
+//	
+//
+//	if (strcmp(lineHeader, "v") == 0)
+//	{
+//		glm::vec3 vertex;
+//		fscanf(file, "%f %f %fn", &vertex.x, &vertex.y, &vertex.z);
+//		temp_vertices.push_back(vertex);
+//	}
+//	else if (strcmp(lineHeader, "vt") == 0)
+//	{
+//		glm::vec2 uv;
+//		fscanf(file, "%f %fn", &uv.x, &uv.y);
+//		temp_uvs.push_back(uv);
+//	}
+//	else if (strcmp(lineHeader, "vn") == 0)
+//	{
+//		glm::vec3 normal;
+//		fscanf(file, "%f %f %fn", &normal.x, &normal.y, &normal.z);
+//		temp_normals.push_back(normal);
+//	}
+//	else if (strcmp(lineHeader, "f") == 0)
+//	{
+//		std::string vertex1, vertex2, vertex3;
+//		unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
+//		int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%dn", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2]);
+//		if (matches != 9)
+//		{
+//			printf("File can't be read by our simple parser : ( Try exporting with other optionsn");
+//			return false;
+//		}
+//		vertexIndices.push_back(vertexIndex[0]);
+//		vertexIndices.push_back(vertexIndex[1]);
+//		vertexIndices.push_back(vertexIndex[2]);
+//		uvIndices.push_back(uvIndex[0]);
+//		uvIndices.push_back(uvIndex[1]);
+//		uvIndices.push_back(uvIndex[2]);
+//		normalIndices.push_back(normalIndex[0]);
+//		normalIndices.push_back(normalIndex[1]);
+//		normalIndices.push_back(normalIndex[2]);
+//
+//		// For each vertex of each triangle
+//		for (unsigned int i = 0; iunsigned int vertexIndex = vertexIndices[i];
+//}
+//}
 
 
 int main()
