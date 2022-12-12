@@ -1,6 +1,6 @@
 # HW2_Bezier_Spline_Modeling
 
-SJTU-SE3389 计算机图形学 第2次作业
+SJTU-SE3306 计算机图形学 第2次作业
 
 任务划分为三个部分，分别是
 
