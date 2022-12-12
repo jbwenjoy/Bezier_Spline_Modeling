@@ -1401,11 +1401,11 @@ void model_convert_to_mesh()
 
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(&all_verts_3d[0]), all_verts_3d, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(&all_verts_3d[0]), &all_verts_3d[0], GL_DYNAMIC_DRAW);
 	std::cout << "all_verts_3d:\n" << "size = " << sizeof(all_verts_3d) << std::endl;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(&indices[0]),
-	             indices, GL_DYNAMIC_DRAW);
+	             &indices[0], GL_DYNAMIC_DRAW);
 	std::cout << "indices:\n" << "size = " << sizeof(indices) << std::endl;
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void*>(nullptr));
 	glEnableVertexAttribArray(0);
@@ -1436,6 +1436,8 @@ void model_convert_to_mesh()
 	bool polygon_line = true;
 	// 是否手动改变采样率
 	bool manually_change_sample_rate = false;
+	// 仅在第二帧才会刷新采用率
+	bool first_frame = true;
 
 	// 渲染循环
 	while (!glfwWindowShouldClose(window))
@@ -1555,7 +1557,7 @@ void model_convert_to_mesh()
 
 
 		// 手动更新采样精度
-		if (changed == true)
+		if (changed == true && first_frame == false)
 		{
 			delta_degree = 360 / static_cast<float>(amount); // 间隔的角度
 			std::cout << "delta_degree = " << delta_degree << '\n';
@@ -1742,6 +1744,7 @@ void model_convert_to_mesh()
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+		first_frame = false;
 	}
 
 	// 把indices的数据写出来检查
