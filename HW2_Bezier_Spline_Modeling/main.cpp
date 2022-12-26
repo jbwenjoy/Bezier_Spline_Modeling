@@ -1372,12 +1372,15 @@ void model_convert_to_mesh()
 		glm::vec3 delta_1 = all_verts_3d_vec3[indices[3 * i + 1]] - all_verts_3d_vec3[indices[3 * i + 0]];
 		glm::vec3 delta_2 = all_verts_3d_vec3[indices[3 * i + 2]] - all_verts_3d_vec3[indices[3 * i + 1]];
 		glm::vec3 cross = glm::cross(delta_1, delta_2);
-		if (cross.x < 1e-6 && cross.y < 1e-6 && cross.z < 1e-6)
+		if (cross.x < 1e-6 && cross.y < 1e-6 && cross.z < 1e-6 && i > 0)
 		{
 			// 存在点重合
-			vn[3 * i + 0] = glm::vec3(1.0f, 0.0f, 0.0f);
+			/*vn[3 * i + 0] = glm::vec3(1.0f, 0.0f, 0.0f);
 			vn[3 * i + 1] = glm::vec3(1.0f, 0.0f, 0.0f);
-			vn[3 * i + 2] = glm::vec3(1.0f, 0.0f, 0.0f);
+			vn[3 * i + 2] = glm::vec3(1.0f, 0.0f, 0.0f);*/
+			vn[3 * i + 0] = vn[3 * i - 3];
+			vn[3 * i + 1] = vn[3 * i - 2];
+			vn[3 * i + 2] = vn[3 * i - 1];
 		}
 		else
 		{
@@ -1404,8 +1407,7 @@ void model_convert_to_mesh()
 	glBufferData(GL_ARRAY_BUFFER, 4 * total_sample_verts_3d * sizeof(&all_verts_3d[0]), &all_verts_3d[0], GL_DYNAMIC_DRAW);
 	std::cout << "all_verts_3d:\n" << "size = " << sizeof(all_verts_3d) << std::endl;
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(&indices[0]),
-	             &indices[0], GL_DYNAMIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * 2 * amount * (total_sample_verts_1_manager - 1) * sizeof(&indices[0]), &indices[0], GL_DYNAMIC_DRAW);
 	std::cout << "indices:\n" << "size = " << sizeof(indices) << std::endl;
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), static_cast<void*>(nullptr));
 	glEnableVertexAttribArray(0);
@@ -1686,12 +1688,12 @@ void model_convert_to_mesh()
 
 				glm::vec3 cross = glm::cross(delta_1, delta_2);
 
-				if (cross.x < 1e-6 && cross.y < 1e-6 && cross.z < 1e-6)
+				if (cross.x < 1e-6 && cross.y < 1e-6 && cross.z < 1e-6 && i > 0)
 				{
 					// 存在点重合
-					vn[3 * i + 0] = glm::vec3(1.0f, 0.0f, 0.0f);
-					vn[3 * i + 1] = glm::vec3(1.0f, 0.0f, 0.0f);
-					vn[3 * i + 2] = glm::vec3(1.0f, 0.0f, 0.0f);
+					vn[3 * i + 0] = vn[3 * i - 3];
+					vn[3 * i + 1] = vn[3 * i - 2];
+					vn[3 * i + 2] = vn[3 * i - 1];
 				}
 				else
 				{
